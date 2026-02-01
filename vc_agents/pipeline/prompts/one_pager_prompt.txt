@@ -1,0 +1,18 @@
+You are writing a VC one-pager expansion for the idea below.
+
+Idea card:
+{idea_json}
+
+Return a JSON object with these fields:
+- idea_id (string)
+- proposer_provider (string)
+- one_pager_provider (string, MUST be exactly: {provider_name})
+- problem (string)
+- solution (string)
+- market (string)
+- moat (string)
+- business_model (string)
+- go_to_market (string)
+- risks (string)
+
+Only return valid JSON. Do not wrap in Markdown.

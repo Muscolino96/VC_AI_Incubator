@@ -1,0 +1,16 @@
+You are scoring a VC idea on a 0-10 scale.
+
+Idea card:
+{idea_json}
+
+One-pager:
+{one_pager_json}
+
+Return a JSON object with these fields:
+- idea_id (string)
+- proposer_provider (string)
+- scorer_provider (string, MUST be exactly: {provider_name})
+- score (number, 0-10)
+- rationale (string)
+
+Only return valid JSON. Do not wrap in Markdown.

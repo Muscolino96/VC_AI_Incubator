@@ -2,9 +2,9 @@
 
 This repository scaffolds an "AI-agent-managed VC idea pipeline":
 
-- 4 proposers generate 10 idea cards each (40 total)
-- each idea is expanded into a standardized one-pager (40 expansions)
-- each one-pager is cross-scored by the other 3 models (120 scores)
+- 4 proposers generate 5 idea cards each (20 total)
+- each idea is expanded into a standardized one-pager (20 expansions)
+- each one-pager is cross-scored by the other 3 models (60 scores)
 - results are aggregated into a table (CSV)
 
 ## Quickstart
@@ -25,6 +25,7 @@ This repository scaffolds an "AI-agent-managed VC idea pipeline":
 
 Output:
 - `out/run_<timestamp>/ideas.jsonl`
+- `out/run_<timestamp>/one_pagers.jsonl`
 - `out/run_<timestamp>/scores.jsonl`
 - `out/run_<timestamp>/aggregate.csv`
 
@@ -34,3 +35,4 @@ Output:
 - All agent outputs are required to be **valid JSON** matching the schemas in `vc_agents/schemas.py`.
 - The orchestrator retries on invalid JSON.
 - For cost control, you can comment out providers you aren't using in `vc_agents/pipeline/run.py`.
+- For local testing without API keys, you can run with `USE_MOCK=1` or `--use-mock`.
