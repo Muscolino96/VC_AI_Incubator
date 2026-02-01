@@ -23,6 +23,11 @@ This repository scaffolds an "AI-agent-managed VC idea pipeline":
    python -m vc_agents.pipeline.run
    ```
 
+Optional: validate keys before running (uses live API calls when `--live` is passed):
+```bash
+python -m vc_agents.pipeline.validate_keys --live
+```
+
 Output:
 - `out/run_<timestamp>/ideas.jsonl`
 - `out/run_<timestamp>/one_pagers.jsonl`

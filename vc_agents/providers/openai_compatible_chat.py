@@ -13,8 +13,9 @@ class OpenAICompatibleChat(BaseProvider):
         api_key_env: str = "OPENAI_COMPAT_API_KEY",
         model: str = "deepseek-reasoner",
         name: str = "openai-compatible-chat",
+        base_url: str | None = None,
     ) -> None:
-        base_url = os.getenv("OPENAI_COMPAT_BASE_URL", "https://api.openai.com/v1")
+        base_url = base_url or os.getenv("OPENAI_COMPAT_BASE_URL", "https://api.openai.com/v1")
         config = ProviderConfig(
             name=name,
             api_key_env=api_key_env,

@@ -99,11 +99,13 @@ def run_pipeline(use_mock: bool, concurrency: int, retry_max: int) -> Path:
             OpenAICompatibleChat(
                 name="deepseek",
                 model=os.getenv("DEEPSEEK_MODEL", "deepseek-reasoner"),
+                base_url=os.getenv("DEEPSEEK_BASE_URL"),
             ),
             OpenAICompatibleChat(
                 name="gemini",
                 api_key_env=os.getenv("GEMINI_API_KEY_ENV", "GEMINI_API_KEY"),
                 model=os.getenv("GEMINI_MODEL", "gemini-3-pro-preview"),
+                base_url=os.getenv("GEMINI_BASE_URL"),
             ),
         ]
 
