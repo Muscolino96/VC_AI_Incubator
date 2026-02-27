@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
 from vc_agents.logging_config import get_logger, setup_logging
+from vc_agents.pipeline.events import EventCallback, EventType, PipelineEvent, noop_callback
 from vc_agents.providers import (
     AnthropicMessages,
     MockProvider,
@@ -159,12 +160,14 @@ def run_stage1(
     retry_max: int,
     concurrency: int,
     run_dir: Path,
+    emit: EventCallback = noop_callback,
 ) -> dict[str, dict[str, Any]]:
     """Each founder proposes ideas, gets cross-feedback, picks the best one.
 
     Returns: dict mapping provider_name -> selection result (with refined_idea).
     """
     logger.info("=== STAGE 1: Ideate and Select ===")
+    emit(PipelineEvent(type=EventType.STAGE_START, stage="stage1", message="Ideate and Select"))
 
     idea_prompt = load_prompt("ideas_prompt.txt")
     feedback_prompt = load_prompt("feedback_prompt.txt")
@@ -189,6 +192,11 @@ def run_stage1(
 
         all_ideas[provider.name] = idea_items
         logger.info("  %s generated %d ideas", provider.name, len(idea_items))
+        emit(PipelineEvent(
+            type=EventType.STEP_COMPLETE, stage="stage1", step="ideas",
+            provider=provider.name, message=f"Generated {len(idea_items)} ideas",
+            data={"ideas": idea_items},
+        ))
 
     # Flatten for output
     flat_ideas = [idea for ideas in all_ideas.values() for idea in ideas]
@@ -252,6 +260,10 @@ def run_stage1(
         )
 
     _write_jsonl(run_dir / "stage1_selections.jsonl", list(selections.values()))
+    emit(PipelineEvent(
+        type=EventType.STAGE_COMPLETE, stage="stage1", message="Ideate and Select complete",
+        data={"selections": {k: v["selected_idea_id"] for k, v in selections.items()}},
+    ))
     return selections
 
 
@@ -267,12 +279,14 @@ def run_stage2(
     concurrency: int,
     max_iterations: int,
     run_dir: Path,
+    emit: EventCallback = noop_callback,
 ) -> dict[str, dict[str, Any]]:
     """Each founder builds a plan; advisors review; founders iterate until ready.
 
     Returns: dict mapping provider_name -> final startup plan.
     """
     logger.info("=== STAGE 2: Build and Iterate (max %d rounds) ===", max_iterations)
+    emit(PipelineEvent(type=EventType.STAGE_START, stage="stage2", message="Build and Iterate"))
 
     build_prompt = load_prompt("build_prompt.txt")
     advisor_prompt = load_prompt("advisor_review_prompt.txt")
@@ -351,6 +365,13 @@ def run_stage2(
                 avg_score, all_ready,
             )
 
+            emit(PipelineEvent(
+                type=EventType.STEP_COMPLETE, stage="stage2", step=f"review_round_{round_num}",
+                provider=founder.name, idea_id=idea_id,
+                message=f"Round {round_num}: avg={avg_score:.1f}, ready={all_ready}",
+                data={"avg_score": avg_score, "all_ready": all_ready, "round": round_num},
+            ))
+
             if all_ready and avg_score >= 7:
                 logger.info("    Converged! All advisors signal ready for pitch.")
                 break
@@ -380,6 +401,7 @@ def run_stage2(
 
     _write_jsonl(run_dir / "stage2_final_plans.jsonl", list(final_plans.values()))
     _write_jsonl(run_dir / "stage2_all_reviews.jsonl", all_reviews)
+    emit(PipelineEvent(type=EventType.STAGE_COMPLETE, stage="stage2", message="Build and Iterate complete"))
     return final_plans
 
 
@@ -394,12 +416,14 @@ def run_stage3(
     retry_max: int,
     concurrency: int,
     run_dir: Path,
+    emit: EventCallback = noop_callback,
 ) -> pd.DataFrame:
     """Each founder pitches; other models evaluate as investors.
 
     Returns: portfolio report DataFrame.
     """
     logger.info("=== STAGE 3: Seed Pitch ===")
+    emit(PipelineEvent(type=EventType.STAGE_START, stage="stage3", message="Seed Pitch"))
 
     pitch_prompt_tmpl = load_prompt("pitch_prompt.txt")
     investor_prompt_tmpl = load_prompt("investor_eval_prompt.txt")
@@ -440,6 +464,12 @@ def run_stage3(
                 "    %s -> %s (conviction: %s)",
                 investor.name, decision["decision"], decision["conviction_score"],
             )
+            emit(PipelineEvent(
+                type=EventType.STEP_COMPLETE, stage="stage3", step="investor_decision",
+                provider=investor.name, idea_id=idea_id,
+                message=f"{investor.name}: {decision['decision']} (conviction {decision['conviction_score']})",
+                data={"decision": decision["decision"], "conviction": decision["conviction_score"]},
+            ))
 
     _write_jsonl(run_dir / "stage3_pitches.jsonl", all_pitches)
     _write_jsonl(run_dir / "stage3_decisions.jsonl", all_decisions)
@@ -502,6 +532,7 @@ def run_pipeline(
     retry_max: int,
     max_iterations: int = 3,
     ideas_per_provider: int = 5,
+    emit: EventCallback = noop_callback,
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
@@ -531,21 +562,25 @@ def run_pipeline(
     run_dir = Path("out") / f"run_{int(time.time())}"
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Pipeline output: %s", run_dir)
+    emit(PipelineEvent(
+        type=EventType.PIPELINE_START, message="Pipeline started",
+        data={"run_dir": str(run_dir), "providers": [p.name for p in providers], "use_mock": use_mock},
+    ))
 
     try:
         # Stage 1: Ideate and Select
         selections = run_stage1(
-            providers, ideas_per_provider, retry_max, concurrency, run_dir,
+            providers, ideas_per_provider, retry_max, concurrency, run_dir, emit=emit,
         )
 
         # Stage 2: Build and Iterate
         final_plans = run_stage2(
-            providers, selections, retry_max, concurrency, max_iterations, run_dir,
+            providers, selections, retry_max, concurrency, max_iterations, run_dir, emit=emit,
         )
 
         # Stage 3: Seed Pitch
         report = run_stage3(
-            providers, final_plans, retry_max, concurrency, run_dir,
+            providers, final_plans, retry_max, concurrency, run_dir, emit=emit,
         )
 
         # Print summary
@@ -557,9 +592,16 @@ def run_pipeline(
                 row["investors_in"], row["investors_total"], row["avg_conviction"],
             )
 
+        emit(PipelineEvent(
+            type=EventType.PIPELINE_COMPLETE, message="Pipeline complete",
+            data={"run_dir": str(run_dir)},
+        ))
         return run_dir
 
-    except ProviderError as exc:
+    except (ProviderError, RuntimeError) as exc:
+        emit(PipelineEvent(
+            type=EventType.PIPELINE_ERROR, message=str(exc),
+        ))
         raise RuntimeError(str(exc)) from exc
     finally:
         for provider in providers:

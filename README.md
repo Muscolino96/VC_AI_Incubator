@@ -33,6 +33,23 @@ The pipeline runs in 3 stages:
 
 Estimated cost per full pipeline run: $8-14 (mostly GPT-5.2 and Claude Opus).
 
+## Web Dashboard
+
+The incubator includes a real-time web dashboard built with FastAPI:
+
+```bash
+python -m vc_agents.web.server
+```
+
+Open http://localhost:8000 to access the dashboard. Features:
+
+- **Launch pipeline runs** directly from the browser (mock or live mode)
+- **Real-time progress** via WebSocket -- see events as they happen
+- **Stage progress tracker** with visual indicators for each stage
+- **Results viewer** -- browse ideas, startup plans, pitches, and investor decisions
+- **Portfolio report** -- ranked table of all startups with conviction scores
+- **Run history** -- view and compare past runs
+
 ## Quickstart
 
 1. Create a virtualenv and install dependencies:
@@ -124,6 +141,7 @@ vc_agents/
     mock.py                      # Mock provider for testing
   pipeline/
     run.py                       # 3-stage pipeline orchestrator
+    events.py                    # Event system for progress tracking
     validate_keys.py             # API key validation
     prompts/
       ideas_prompt.txt           # Stage 1: idea generation
@@ -134,6 +152,9 @@ vc_agents/
       iterate_prompt.txt         # Stage 2: founder iterates on feedback
       pitch_prompt.txt           # Stage 3: seed pitch package
       investor_eval_prompt.txt   # Stage 3: investor evaluation
+  web/
+    server.py                    # FastAPI backend with WebSocket
+    dashboard.html               # Single-page dashboard frontend
 tests/
   test_json_extraction.py        # JSON extraction edge cases
   test_schemas.py                # Schema validation tests
