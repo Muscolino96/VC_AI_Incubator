@@ -79,6 +79,28 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
     _runs[run_id]["status"] = "running"
     _runs[run_id]["started_at"] = time.time()
 
+    # Inject runtime API keys into environment (scoped to this thread)
+    api_keys = config.get("api_keys", {})
+    for env_var, value in api_keys.items():
+        if value and value.strip():
+            os.environ[env_var] = value.strip()
+
+    # Inject model overrides
+    models = config.get("models", {})
+    if models.get("openai"):
+        os.environ["OPENAI_MODEL"] = models["openai"]
+    if models.get("anthropic"):
+        os.environ["ANTHROPIC_MODEL"] = models["anthropic"]
+    if models.get("deepseek"):
+        os.environ["DEEPSEEK_MODEL"] = models["deepseek"]
+    if models.get("gemini"):
+        os.environ["GEMINI_MODEL"] = models["gemini"]
+
+    # Inject sector focus
+    sector = config.get("sector_focus", "")
+    if sector:
+        os.environ["SECTOR_FOCUS"] = sector
+
     try:
         run_dir = run_pipeline(
             use_mock=config.get("use_mock", True),
@@ -86,6 +108,7 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             retry_max=config.get("retry_max", 3),
             max_iterations=config.get("max_iterations", 3),
             ideas_per_provider=config.get("ideas_per_provider", 5),
+            sector_focus=sector,
             emit=emit,
         )
         _runs[run_id]["status"] = "complete"

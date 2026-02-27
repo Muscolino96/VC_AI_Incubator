@@ -160,6 +160,7 @@ def run_stage1(
     retry_max: int,
     concurrency: int,
     run_dir: Path,
+    sector_focus: str = "",
     emit: EventCallback = noop_callback,
 ) -> dict[str, dict[str, Any]]:
     """Each founder proposes ideas, gets cross-feedback, picks the best one.
@@ -177,8 +178,17 @@ def run_stage1(
     logger.info("Step 1a: Generating ideas (%d providers x %d ideas)", len(providers), ideas_per_provider)
     all_ideas: dict[str, list[dict[str, Any]]] = {}  # provider_name -> [idea_cards]
 
+    # Build sector focus instruction
+    sector_instruction = ""
+    if sector_focus:
+        sector_instruction = (
+            f"\n\nSECTOR FOCUS: All 5 ideas must be in or closely related to the "
+            f'"{sector_focus}" sector. Be creative within this constraint -- explore '
+            f"different angles, business models, and customer segments within {sector_focus}.\n"
+        )
+
     for provider in providers:
-        prompt = idea_prompt.format(provider_name=provider.name)
+        prompt = idea_prompt.format(provider_name=provider.name) + sector_instruction
         payload = retry_json_call(
             provider, prompt, schema=None,
             context=f"idea generation ({provider.name})", max_retries=retry_max,
@@ -532,6 +542,7 @@ def run_pipeline(
     retry_max: int,
     max_iterations: int = 3,
     ideas_per_provider: int = 5,
+    sector_focus: str = "",
     emit: EventCallback = noop_callback,
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
@@ -570,7 +581,8 @@ def run_pipeline(
     try:
         # Stage 1: Ideate and Select
         selections = run_stage1(
-            providers, ideas_per_provider, retry_max, concurrency, run_dir, emit=emit,
+            providers, ideas_per_provider, retry_max, concurrency, run_dir,
+            sector_focus=sector_focus, emit=emit,
         )
 
         # Stage 2: Build and Iterate
@@ -639,6 +651,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="Ideas each provider generates in Stage 1 (default: 5)",
     )
     parser.add_argument(
+        "--sector-focus", type=str,
+        default=os.getenv("SECTOR_FOCUS", ""),
+        help="Focus all ideas on a specific sector (e.g. 'Healthcare', 'Fintech')",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true",
         help="Enable debug logging",
     )
@@ -658,6 +675,7 @@ def main(argv: list[str] | None = None) -> int:
         retry_max=args.retry_max,
         max_iterations=args.max_iterations,
         ideas_per_provider=args.ideas_per_provider,
+        sector_focus=args.sector_focus,
     )
     logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0

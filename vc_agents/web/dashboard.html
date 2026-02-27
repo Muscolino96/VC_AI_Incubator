@@ -6,7 +6,7 @@
 <title>VC AI Incubator</title>
 <style>
   :root {
-    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22253a; --border: #2a2d3a;
     --text: #e4e4e7; --muted: #8b8d97; --accent: #6366f1;
     --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6;
   }
@@ -14,7 +14,6 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
   .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-  /* Header */
   header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
   header h1 { font-size: 24px; font-weight: 700; }
   header h1 span { color: var(--accent); }
@@ -22,15 +21,30 @@
   .status-dot.connected { background: var(--green); }
   .status-dot.disconnected { background: var(--red); }
 
-  /* Controls */
-  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
-  button { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; transition: opacity .15s; }
-  button:hover { opacity: .85; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  button.secondary { background: var(--surface); border: 1px solid var(--border); }
-  select, input { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 14px; }
-  label { font-size: 13px; color: var(--muted); }
-  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  /* Control Panel */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .panel h2 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .panel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .panel-section { background: var(--surface2); border-radius: 8px; padding: 16px; }
+  .panel-section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; font-weight: 600; }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 14px; transition: border-color .15s; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .field input[type="password"] { font-family: monospace; letter-spacing: 1px; }
+  .field .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+
+  .actions { display: flex; gap: 12px; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  button { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all .15s; }
+  button:hover { opacity: .85; transform: translateY(-1px); }
+  button:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  button.secondary { background: var(--surface2); border: 1px solid var(--border); font-weight: 500; }
+  button.lg { padding: 12px 32px; font-size: 16px; }
+  .run-status { font-size: 13px; color: var(--muted); }
 
   /* Tabs */
   .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
@@ -41,32 +55,29 @@
   .tab-content.active { display: block; }
 
   /* Progress */
-  .progress-bar { background: var(--surface); border-radius: 8px; overflow: hidden; height: 6px; margin: 16px 0; }
-  .progress-fill { height: 100%; background: var(--accent); transition: width .3s; border-radius: 8px; }
-  .stage-badges { display: flex; gap: 8px; margin-bottom: 16px; }
-  .stage-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); }
-  .stage-badge.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .progress-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; display: none; }
+  .progress-bar { background: var(--bg); border-radius: 8px; overflow: hidden; height: 6px; margin: 12px 0; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); transition: width .3s; border-radius: 8px; }
+  .stage-badges { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stage-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); }
+  .stage-badge.active { background: var(--accent); border-color: var(--accent); color: white; animation: pulse 2s infinite; }
   .stage-badge.complete { background: rgba(34,197,94,.15); border-color: var(--green); color: var(--green); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
 
-  /* Event log */
-  .event-log { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; max-height: 300px; overflow-y: auto; padding: 12px; font-family: 'SF Mono', monospace; font-size: 12px; }
-  .event-log .event { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
-  .event-log .event:last-child { border-bottom: none; }
-  .event-log .ts { color: var(--muted); margin-right: 8px; }
-  .event-log .type { color: var(--accent); margin-right: 8px; font-weight: 500; }
+  .event-log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 250px; overflow-y: auto; padding: 12px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+  .event { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+  .event:last-child { border-bottom: none; }
+  .event .ts { color: var(--muted); margin-right: 8px; }
+  .event .type { color: var(--accent); margin-right: 8px; font-weight: 500; }
 
   /* Cards */
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: border-color .15s; }
   .card:hover { border-color: var(--accent); }
   .card h3 { font-size: 16px; margin-bottom: 8px; }
-  .card .provider { font-size: 12px; color: var(--accent); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+  .card .provider { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
   .card p { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-  .card .score { font-size: 28px; font-weight: 700; }
-  .card .score.high { color: var(--green); }
-  .card .score.mid { color: var(--yellow); }
-  .card .score.low { color: var(--red); }
-  .card .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 4px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 4px; }
   .tag.invest { background: rgba(34,197,94,.15); color: var(--green); }
   .tag.pass { background: rgba(239,68,68,.15); color: var(--red); }
 
@@ -76,15 +87,17 @@
   th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
   tr:hover td { background: rgba(99,102,241,.05); }
 
-  /* Expandable sections */
   details { margin-bottom: 12px; }
-  summary { cursor: pointer; padding: 8px 0; font-weight: 500; color: var(--text); }
+  summary { cursor: pointer; padding: 8px 0; font-weight: 500; }
   summary:hover { color: var(--accent); }
-  details .content { padding: 12px; background: var(--surface); border-radius: 8px; margin-top: 8px; font-size: 13px; }
+  details .content { padding: 16px; background: var(--surface); border-radius: 8px; margin-top: 8px; font-size: 13px; line-height: 1.6; }
+  details .content h4 { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
+  details .content h4:first-child { margin-top: 0; }
 
-  /* Empty state */
   .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
   .empty h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+
+  .key-warning { background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--yellow); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -94,55 +107,143 @@
     <div id="wsStatus"><span class="status-dot disconnected"></span> Disconnected</div>
   </header>
 
-  <div class="controls">
-    <button id="btnRun" onclick="startRun()">Launch Pipeline</button>
-    <div class="control-group">
-      <label>Mode</label>
-      <select id="cfgMock"><option value="true" selected>Mock (no API keys)</option><option value="false">Live (real APIs)</option></select>
+  <!-- Control Panel -->
+  <div class="panel" id="controlPanel">
+    <h2>Control Panel</h2>
+    <div class="panel-grid">
+
+      <!-- Pipeline Settings -->
+      <div class="panel-section">
+        <h3>Pipeline Settings</h3>
+        <div class="field-row">
+          <div class="field">
+            <label>Number of Startups (per model)</label>
+            <select id="cfgIdeas"><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
+          </div>
+          <div class="field">
+            <label>Iteration Rounds</label>
+            <select id="cfgIter"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Sector Focus (optional)</label>
+          <input type="text" id="cfgSector" placeholder="e.g. Healthcare, Fintech, Climate Tech, AI/ML...">
+          <div class="hint">Leave empty for diverse ideas across all sectors</div>
+        </div>
+        <div class="field">
+          <label>Mode</label>
+          <select id="cfgMock">
+            <option value="true">Mock (no API keys needed)</option>
+            <option value="false">Live (real API calls)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Model Selection -->
+      <div class="panel-section">
+        <h3>Model Selection</h3>
+        <div class="field">
+          <label>OpenAI Model</label>
+          <select id="modelOpenai">
+            <option value="gpt-5.2">GPT-5.2</option>
+            <option value="gpt-4.1">GPT-4.1</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="o3">o3</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Anthropic Model</label>
+          <select id="modelAnthropic">
+            <option value="claude-opus-4-5">Claude Opus 4.5</option>
+            <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>DeepSeek Model</label>
+          <select id="modelDeepseek">
+            <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+            <option value="deepseek-chat">DeepSeek Chat</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Gemini Model</label>
+          <select id="modelGemini">
+            <option value="gemini-3-pro-preview">Gemini 3 Pro</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- API Keys -->
+      <div class="panel-section">
+        <h3>API Keys</h3>
+        <div class="field">
+          <label>OpenAI API Key</label>
+          <input type="password" id="keyOpenai" placeholder="sk-...">
+        </div>
+        <div class="field">
+          <label>Anthropic API Key</label>
+          <input type="password" id="keyAnthropic" placeholder="sk-ant-...">
+        </div>
+        <div class="field">
+          <label>DeepSeek API Key</label>
+          <input type="password" id="keyDeepseek" placeholder="sk-...">
+        </div>
+        <div class="field">
+          <label>Gemini API Key</label>
+          <input type="password" id="keyGemini" placeholder="AI...">
+        </div>
+        <div class="key-warning">
+          Keys are sent to the server over your connection and used only for this run. They are never stored to disk or logged. For production, use .env files instead.
+        </div>
+      </div>
     </div>
-    <div class="control-group">
-      <label>Iterations</label>
-      <select id="cfgIter"><option>1</option><option>2</option><option selected>3</option></select>
+
+    <div class="actions">
+      <button class="lg" id="btnRun" onclick="startRun()">Launch Incubator</button>
+      <button class="secondary" onclick="loadRuns()">Refresh Runs</button>
+      <span class="run-status" id="runStatus"></span>
     </div>
-    <div class="control-group">
-      <label>Ideas/Provider</label>
-      <select id="cfgIdeas"><option>3</option><option selected>5</option><option>7</option></select>
-    </div>
-    <button class="secondary" onclick="loadRuns()">Refresh Runs</button>
   </div>
 
-  <div id="activeRun" style="display:none">
+  <!-- Progress Section -->
+  <div class="progress-section" id="progressSection">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>Pipeline Progress</strong>
+      <span class="run-status" id="progressStatus"></span>
+    </div>
     <div class="stage-badges" id="stageBadges">
-      <div class="stage-badge" data-stage="stage1">Stage 1: Ideate</div>
-      <div class="stage-badge" data-stage="stage2">Stage 2: Build</div>
-      <div class="stage-badge" data-stage="stage3">Stage 3: Pitch</div>
+      <div class="stage-badge" data-stage="stage1">Stage 1: Ideate & Select</div>
+      <div class="stage-badge" data-stage="stage2">Stage 2: Build & Iterate</div>
+      <div class="stage-badge" data-stage="stage3">Stage 3: Seed Pitch</div>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div class="event-log" id="eventLog"></div>
   </div>
 
+  <!-- Tabs -->
   <div class="tabs" id="mainTabs">
-    <div class="tab active" data-tab="runs">Runs</div>
+    <div class="tab active" data-tab="runs">Run History</div>
     <div class="tab" data-tab="ideas">Ideas</div>
-    <div class="tab" data-tab="plans">Plans</div>
-    <div class="tab" data-tab="pitches">Pitches</div>
-    <div class="tab" data-tab="portfolio">Portfolio</div>
+    <div class="tab" data-tab="plans">Startup Plans</div>
+    <div class="tab" data-tab="pitches">Pitches & Decisions</div>
+    <div class="tab" data-tab="portfolio">Portfolio Report</div>
   </div>
 
   <div class="tab-content active" id="tab-runs">
-    <div id="runsList" class="empty"><h2>No runs yet</h2><p>Click "Launch Pipeline" to start your first incubator run.</p></div>
+    <div id="runsList" class="empty"><h2>No runs yet</h2><p>Configure the control panel above and click "Launch Incubator" to start.</p></div>
   </div>
   <div class="tab-content" id="tab-ideas"><div id="ideasContent" class="empty"><p>Run a pipeline to see ideas here.</p></div></div>
   <div class="tab-content" id="tab-plans"><div id="plansContent" class="empty"><p>Run a pipeline to see startup plans here.</p></div></div>
-  <div class="tab-content" id="tab-pitches"><div id="pitchesContent" class="empty"><p>Run a pipeline to see pitches here.</p></div></div>
+  <div class="tab-content" id="tab-pitches"><div id="pitchesContent" class="empty"><p>Run a pipeline to see pitches and investor decisions here.</p></div></div>
   <div class="tab-content" id="tab-portfolio"><div id="portfolioContent" class="empty"><p>Run a pipeline to see the portfolio report here.</p></div></div>
 </div>
 
 <script>
-// -- State --
 let ws = null;
 let currentRunId = null;
-let eventCount = 0;
 
 // -- WebSocket --
 function connectWS() {
@@ -152,27 +253,26 @@ function connectWS() {
     document.getElementById('wsStatus').innerHTML = '<span class="status-dot connected"></span> Connected';
   };
   ws.onclose = () => {
-    document.getElementById('wsStatus').innerHTML = '<span class="status-dot disconnected"></span> Disconnected';
+    document.getElementById('wsStatus').innerHTML = '<span class="status-dot disconnected"></span> Reconnecting...';
     setTimeout(connectWS, 2000);
   };
   ws.onmessage = (e) => {
     const event = JSON.parse(e.data);
-    if (event.type === 'pong') return;
-    handleEvent(event);
+    if (event.type !== 'pong') handleEvent(event);
   };
 }
 
 function handleEvent(event) {
-  eventCount++;
   const log = document.getElementById('eventLog');
-  const activeRun = document.getElementById('activeRun');
-  activeRun.style.display = 'block';
+  const section = document.getElementById('progressSection');
+  section.style.display = 'block';
 
-  // Update stage badges
+  // Stage badges
   if (event.type === 'stage_start') {
     document.querySelectorAll('.stage-badge').forEach(b => b.classList.remove('active'));
     const badge = document.querySelector(`[data-stage="${event.stage}"]`);
     if (badge) badge.classList.add('active');
+    document.getElementById('progressStatus').textContent = event.message;
   }
   if (event.type === 'stage_complete') {
     const badge = document.querySelector(`[data-stage="${event.stage}"]`);
@@ -180,25 +280,32 @@ function handleEvent(event) {
   }
 
   // Progress bar
-  const stageProgress = { stage1: 33, stage2: 66, stage3: 100 };
-  if (event.stage && stageProgress[event.stage]) {
-    const base = event.type.includes('complete') ? stageProgress[event.stage] : stageProgress[event.stage] - 20;
-    document.getElementById('progressFill').style.width = base + '%';
+  const prog = { stage1: 33, stage2: 66, stage3: 100 };
+  if (event.stage && prog[event.stage]) {
+    const pct = event.type.includes('complete') ? prog[event.stage] : prog[event.stage] - 15;
+    document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
   }
+
   if (event.type === 'pipeline_complete') {
     document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressStatus').textContent = 'Complete!';
     document.getElementById('btnRun').disabled = false;
+    document.getElementById('runStatus').textContent = '';
     if (currentRunId) loadResults(currentRunId);
   }
   if (event.type === 'pipeline_error') {
     document.getElementById('btnRun').disabled = false;
+    document.getElementById('runStatus').textContent = '';
+    document.getElementById('progressStatus').textContent = 'Error: ' + event.message;
+    document.getElementById('progressStatus').style.color = 'var(--red)';
   }
 
   // Log entry
   const ts = new Date(event.timestamp * 1000).toLocaleTimeString();
   const div = document.createElement('div');
   div.className = 'event';
-  div.innerHTML = `<span class="ts">${ts}</span><span class="type">${event.type}</span>${event.message || ''}${event.provider ? ' <span style="color:var(--blue)">[' + event.provider + ']</span>' : ''}`;
+  const provTag = event.provider ? ` <span style="color:var(--blue)">[${event.provider}]</span>` : '';
+  div.innerHTML = `<span class="ts">${ts}</span><span class="type">${event.type}</span>${event.message || ''}${provTag}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
 }
@@ -207,67 +314,106 @@ function handleEvent(event) {
 async function startRun() {
   const btn = document.getElementById('btnRun');
   btn.disabled = true;
-  eventCount = 0;
+  document.getElementById('runStatus').textContent = 'Starting pipeline...';
 
-  // Reset UI
-  document.querySelectorAll('.stage-badge').forEach(b => { b.classList.remove('active', 'complete'); });
+  // Reset progress
+  document.querySelectorAll('.stage-badge').forEach(b => b.classList.remove('active', 'complete'));
   document.getElementById('progressFill').style.width = '0%';
   document.getElementById('eventLog').innerHTML = '';
-  document.getElementById('activeRun').style.display = 'block';
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('progressStatus').textContent = 'Initializing...';
+  document.getElementById('progressStatus').style.color = '';
+
+  const useMock = document.getElementById('cfgMock').value === 'true';
 
   const config = {
-    use_mock: document.getElementById('cfgMock').value === 'true',
+    use_mock: useMock,
     max_iterations: parseInt(document.getElementById('cfgIter').value),
     ideas_per_provider: parseInt(document.getElementById('cfgIdeas').value),
+    sector_focus: document.getElementById('cfgSector').value.trim(),
     concurrency: 1,
     retry_max: 3,
+    models: {
+      openai: document.getElementById('modelOpenai').value,
+      anthropic: document.getElementById('modelAnthropic').value,
+      deepseek: document.getElementById('modelDeepseek').value,
+      gemini: document.getElementById('modelGemini').value,
+    },
   };
 
-  const resp = await fetch('/api/runs', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config) });
-  const data = await resp.json();
-  currentRunId = data.run_id;
+  // Only send API keys in live mode
+  if (!useMock) {
+    config.api_keys = {
+      OPENAI_API_KEY: document.getElementById('keyOpenai').value,
+      ANTHROPIC_API_KEY: document.getElementById('keyAnthropic').value,
+      OPENAI_COMPAT_API_KEY: document.getElementById('keyDeepseek').value,
+      GEMINI_API_KEY: document.getElementById('keyGemini').value,
+    };
+  }
+
+  try {
+    const resp = await fetch('/api/runs', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(config),
+    });
+    const data = await resp.json();
+    currentRunId = data.run_id;
+    document.getElementById('runStatus').textContent = `Run ${data.run_id} started`;
+  } catch (err) {
+    btn.disabled = false;
+    document.getElementById('runStatus').textContent = 'Failed to start: ' + err.message;
+  }
 }
 
 async function loadRuns() {
-  const resp = await fetch('/api/runs');
-  const runs = await resp.json();
-  const container = document.getElementById('runsList');
-
-  if (!runs.length) {
-    container.innerHTML = '<div class="empty"><h2>No runs yet</h2><p>Click "Launch Pipeline" to start.</p></div>';
-    return;
-  }
-
-  let html = '<table><thead><tr><th>Run ID</th><th>Status</th><th>Mode</th><th>Events</th><th>Started</th><th>Actions</th></tr></thead><tbody>';
-  for (const run of runs) {
-    const started = run.started_at ? new Date(run.started_at * 1000).toLocaleString() : '-';
-    const mode = run.config?.use_mock ? 'Mock' : 'Live';
-    const statusColor = run.status === 'complete' ? 'var(--green)' : run.status === 'error' ? 'var(--red)' : 'var(--yellow)';
-    html += `<tr>
-      <td>${run.run_id}</td>
-      <td style="color:${statusColor}">${run.status}</td>
-      <td>${mode}</td>
-      <td>${run.event_count}</td>
-      <td>${started}</td>
-      <td>${run.status === 'complete' ? `<button class="secondary" onclick="loadResults('${run.run_id}')" style="padding:4px 12px;font-size:12px">View Results</button>` : ''}</td>
-    </tr>`;
-  }
-  html += '</tbody></table>';
-  container.innerHTML = html;
+  try {
+    const resp = await fetch('/api/runs');
+    const runs = await resp.json();
+    const container = document.getElementById('runsList');
+    if (!runs.length) {
+      container.innerHTML = '<div class="empty"><h2>No runs yet</h2><p>Configure the control panel above and click "Launch Incubator".</p></div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Run</th><th>Status</th><th>Mode</th><th>Sector</th><th>Events</th><th>Started</th><th></th></tr></thead><tbody>';
+    for (const run of runs) {
+      const started = run.started_at ? new Date(run.started_at * 1000).toLocaleString() : '-';
+      const mode = run.config?.use_mock ? 'Mock' : 'Live';
+      const sector = run.config?.sector_focus || 'All';
+      const sc = run.status === 'complete' ? 'var(--green)' : run.status === 'error' ? 'var(--red)' : 'var(--yellow)';
+      html += `<tr>
+        <td style="font-weight:600">${run.run_id}</td>
+        <td style="color:${sc}">${run.status}${run.error ? ': ' + run.error.substring(0,50) : ''}</td>
+        <td>${mode}</td>
+        <td>${sector}</td>
+        <td>${run.event_count}</td>
+        <td>${started}</td>
+        <td>${run.status === 'complete' ? `<button class="secondary" onclick="loadResults('${run.run_id}')" style="padding:4px 12px;font-size:12px">View</button>` : ''}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch(e) {}
 }
 
 async function loadResults(runId) {
-  const resp = await fetch(`/api/runs/${runId}/results`);
-  if (!resp.ok) return;
-  const results = await resp.json();
-  renderIdeas(results.stage1_ideas || []);
-  renderPlans(results.stage2_final_plans || []);
-  renderPitches(results.stage3_pitches || [], results.stage3_decisions || []);
-  renderPortfolio(results.portfolio_report || []);
-  loadRuns();
+  try {
+    const resp = await fetch(`/api/runs/${runId}/results`);
+    if (!resp.ok) return;
+    const r = await resp.json();
+    renderIdeas(r.stage1_ideas || []);
+    renderPlans(r.stage2_final_plans || []);
+    renderPitches(r.stage3_pitches || [], r.stage3_decisions || []);
+    renderPortfolio(r.portfolio_report || []);
+    loadRuns();
+    // Switch to portfolio tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('[data-tab="portfolio"]').classList.add('active');
+    document.getElementById('tab-portfolio').classList.add('active');
+  } catch(e) {}
 }
 
-// -- Renderers --
 function renderIdeas(ideas) {
   const el = document.getElementById('ideasContent');
   if (!ideas.length) { el.innerHTML = '<div class="empty"><p>No ideas yet.</p></div>'; return; }
@@ -275,12 +421,12 @@ function renderIdeas(ideas) {
   for (const idea of ideas) {
     html += `<div class="card">
       <div class="provider">${idea.proposer_provider}</div>
-      <h3>${idea.title}</h3>
-      <p>${idea.summary}</p>
-      <p><strong>Target:</strong> ${idea.target_customer}</p>
-      <p><strong>Why now:</strong> ${idea.why_now}</p>
-      <p><strong>Market:</strong> ${idea.market_size_estimate}</p>
-      <p><strong>Moat:</strong> ${idea.unfair_advantage}</p>
+      <h3>${esc(idea.title)}</h3>
+      <p>${esc(idea.summary)}</p>
+      <p><strong>Target:</strong> ${esc(idea.target_customer)}</p>
+      <p><strong>Why now:</strong> ${esc(idea.why_now)}</p>
+      <p><strong>Market:</strong> ${esc(idea.market_size_estimate)}</p>
+      <p><strong>Moat:</strong> ${esc(idea.unfair_advantage)}</p>
     </div>`;
   }
   html += '</div>';
@@ -291,20 +437,21 @@ function renderPlans(plans) {
   const el = document.getElementById('plansContent');
   if (!plans.length) { el.innerHTML = '<div class="empty"><p>No plans yet.</p></div>'; return; }
   let html = '';
-  for (const plan of plans) {
+  for (const p of plans) {
     html += `<details>
-      <summary><strong>${plan.founder_provider}</strong> -- ${plan.idea_id}</summary>
+      <summary><strong>${esc(p.founder_provider)}</strong> -- ${esc(p.idea_id)}</summary>
       <div class="content">
-        <h4>Problem</h4><p>${plan.problem}</p>
-        <h4>Solution</h4><p>${plan.solution}</p>
-        <h4>Market</h4><p>TAM: ${plan.market?.tam} | SAM: ${plan.market?.sam} | SOM: ${plan.market?.som}</p>
-        <h4>Business Model</h4><p>${plan.business_model?.revenue_model} -- ${plan.business_model?.pricing}</p>
-        <h4>Go-to-Market</h4><p>${plan.go_to_market}</p>
+        <h4>Problem</h4><p>${esc(p.problem)}</p>
+        <h4>Solution</h4><p>${esc(p.solution)}</p>
+        <h4>Market</h4><p>TAM: ${esc(p.market?.tam)} | SAM: ${esc(p.market?.sam)} | SOM: ${esc(p.market?.som)}<br>Growth: ${esc(p.market?.growth_rate)}<br>${esc(p.market?.reasoning)}</p>
+        <h4>Business Model</h4><p>${esc(p.business_model?.revenue_model)}<br>Pricing: ${esc(p.business_model?.pricing)}<br>Unit Economics: ${esc(p.business_model?.unit_economics)}</p>
+        <h4>Go-to-Market</h4><p>${esc(p.go_to_market)}</p>
         <h4>Competitive Landscape</h4>
-        ${(plan.competitive_landscape || []).map(c => `<p><strong>${c.competitor}:</strong> ${c.our_advantage}</p>`).join('')}
-        <h4>Risks</h4>
-        ${(plan.risks_and_mitigations || []).map(r => `<p><span class="tag ${r.severity === 'critical' ? 'pass' : 'invest'}">${r.severity}</span> ${r.risk} -- ${r.mitigation}</p>`).join('')}
-        <h4>Funding Ask</h4><p>${plan.funding_ask?.amount} -- ${plan.funding_ask?.use_of_funds}</p>
+        ${(p.competitive_landscape||[]).map(c=>`<p><strong>${esc(c.competitor)}:</strong> Strength: ${esc(c.strength)} | Weakness: ${esc(c.weakness)} | Our edge: ${esc(c.our_advantage)}</p>`).join('')}
+        <h4>Risks & Mitigations</h4>
+        ${(p.risks_and_mitigations||[]).map(r=>`<p><span class="tag ${r.severity==='critical'||r.severity==='high'?'pass':'invest'}">${r.severity}</span> ${esc(r.risk)} -- ${esc(r.mitigation)}</p>`).join('')}
+        <h4>12-Month Roadmap</h4><p>${esc(p.twelve_month_roadmap)}</p>
+        <h4>Funding Ask</h4><p>${esc(p.funding_ask?.amount)}<br>Use: ${esc(p.funding_ask?.use_of_funds)}<br>Targets: ${esc(p.funding_ask?.target_metrics)}</p>
       </div>
     </details>`;
   }
@@ -316,18 +463,19 @@ function renderPitches(pitches, decisions) {
   if (!pitches.length) { el.innerHTML = '<div class="empty"><p>No pitches yet.</p></div>'; return; }
   let html = '<div class="card-grid">';
   for (const pitch of pitches) {
-    const ideaDecisions = decisions.filter(d => d.idea_id === pitch.idea_id);
-    const investCount = ideaDecisions.filter(d => d.decision === 'invest').length;
+    const dd = decisions.filter(d => d.idea_id === pitch.idea_id);
+    const investN = dd.filter(d => d.decision === 'invest').length;
     html += `<div class="card">
-      <div class="provider">${pitch.founder_provider}</div>
-      <h3>${pitch.elevator_pitch}</h3>
-      <p><strong>The Ask:</strong> ${pitch.the_ask}</p>
-      <p><strong>Why Now:</strong> ${pitch.why_now}</p>
-      <p><strong>Vision:</strong> ${pitch.five_year_vision}</p>
+      <div class="provider">${esc(pitch.founder_provider)}</div>
+      <h3>${esc(pitch.elevator_pitch)}</h3>
+      <p><strong>Problem/Solution:</strong> ${esc(pitch.problem_solution_fit?.substring(0,200))}...</p>
+      <p><strong>The Ask:</strong> ${esc(pitch.the_ask)}</p>
+      <p><strong>Why Now:</strong> ${esc(pitch.why_now)}</p>
+      <p><strong>5yr Vision:</strong> ${esc(pitch.five_year_vision)}</p>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-        <strong>Investor Decisions:</strong> ${investCount}/${ideaDecisions.length} invest
+        <strong>Investors: ${investN}/${dd.length} invest</strong>
         <div style="margin-top:8px">
-          ${ideaDecisions.map(d => `<span class="tag ${d.decision}">${d.investor_provider}: ${d.decision} (${d.conviction_score}/10)</span> `).join('')}
+          ${dd.map(d=>`<div style="margin:4px 0"><span class="tag ${d.decision}">${d.decision.toUpperCase()}</span> <strong>${esc(d.investor_provider)}</strong> (${d.conviction_score}/10)${d.proposed_terms?` -- ${esc(d.proposed_terms.check_size)} @ ${esc(d.proposed_terms.valuation_range)}`:''}${d.pass_reasons?` -- ${esc(d.pass_reasons.substring(0,100))}`:''}</div>`).join('')}
         </div>
       </div>
     </div>`;
@@ -339,24 +487,26 @@ function renderPitches(pitches, decisions) {
 function renderPortfolio(report) {
   const el = document.getElementById('portfolioContent');
   if (!report.length) { el.innerHTML = '<div class="empty"><p>No portfolio data yet.</p></div>'; return; }
-  let html = '<table><thead><tr><th>Rank</th><th>Founder</th><th>Idea</th><th>Elevator Pitch</th><th>Investors In</th><th>Avg Conviction</th><th>Funding Ask</th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th>Rank</th><th>Founder</th><th>Idea</th><th>Elevator Pitch</th><th>Investors</th><th>Conviction</th><th>Ask</th></tr></thead><tbody>';
   for (const row of report) {
-    const convColor = row.avg_conviction >= 7 ? 'var(--green)' : row.avg_conviction >= 5 ? 'var(--yellow)' : 'var(--red)';
+    const cc = row.avg_conviction >= 7 ? 'var(--green)' : row.avg_conviction >= 5 ? 'var(--yellow)' : 'var(--red)';
     html += `<tr>
-      <td><strong>#${row.rank}</strong></td>
-      <td>${row.founder}</td>
-      <td>${row.idea_id}</td>
-      <td style="max-width:400px">${row.elevator_pitch}</td>
-      <td>${row.investors_in}/${row.investors_total}</td>
-      <td style="color:${convColor};font-weight:700">${row.avg_conviction}</td>
-      <td>${row.funding_ask}</td>
+      <td style="font-size:20px;font-weight:700;color:var(--accent)">#${row.rank}</td>
+      <td style="font-weight:600">${esc(row.founder)}</td>
+      <td style="color:var(--muted)">${esc(row.idea_id)}</td>
+      <td style="max-width:400px">${esc(row.elevator_pitch)}</td>
+      <td><strong>${row.investors_in}</strong>/${row.investors_total}</td>
+      <td style="color:${cc};font-weight:700;font-size:18px">${row.avg_conviction}</td>
+      <td>${esc(row.funding_ask)}</td>
     </tr>`;
   }
   html += '</tbody></table>';
   el.innerHTML = html;
 }
 
-// -- Tabs --
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Tabs
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -366,7 +516,17 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// -- Init --
+// Toggle API key fields based on mode
+document.getElementById('cfgMock').addEventListener('change', (e) => {
+  const keySection = document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini');
+  const isLive = e.target.value === 'false';
+  keySection.forEach(el => { el.disabled = !isLive; el.style.opacity = isLive ? 1 : 0.4; });
+});
+// Initialize key fields as disabled (mock mode default)
+document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini').forEach(el => {
+  el.disabled = true; el.style.opacity = 0.4;
+});
+
 connectWS();
 loadRuns();
 </script>
