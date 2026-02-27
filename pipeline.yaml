@@ -1,0 +1,40 @@
+# VC AI Incubator Pipeline Configuration
+# ----------------------------------------
+# This file controls which providers run and pipeline behaviour.
+# Override any setting via environment variables or CLI flags.
+
+providers:
+  - name: openai
+    type: openai_responses
+    model: gpt-5.2
+    api_key_env: OPENAI_API_KEY
+
+  - name: anthropic
+    type: anthropic_messages
+    model: claude-opus-4-5
+    api_key_env: ANTHROPIC_API_KEY
+
+  - name: deepseek
+    type: openai_compatible_chat
+    model: deepseek-reasoner
+    api_key_env: OPENAI_COMPAT_API_KEY
+    base_url_env: DEEPSEEK_BASE_URL
+
+  - name: gemini
+    type: openai_compatible_chat
+    model: gemini-3-pro-preview
+    api_key_env: GEMINI_API_KEY
+    base_url_env: GEMINI_BASE_URL
+
+pipeline:
+  ideas_per_provider: 5
+  max_iterations: 3        # Stage 2 feedback rounds
+  retry_max: 3             # JSON parse/schema retries
+  concurrency: 1           # parallel API calls (increase with caution)
+
+# Advisor roles rotate through Stage 2 iterations.
+# Each of the 3 non-founder models gets one of these roles.
+advisor_roles:
+  - market_strategist
+  - technical_advisor
+  - financial_advisor

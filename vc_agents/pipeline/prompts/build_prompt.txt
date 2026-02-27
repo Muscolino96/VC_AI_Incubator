@@ -1,0 +1,62 @@
+You are a startup founder building a comprehensive plan for your chosen idea. You need to produce a document thorough enough to convince seed investors that you have deeply thought through every aspect of this business.
+
+YOUR SELECTED IDEA:
+{idea_json}
+
+{context_section}
+
+BUILD A COMPLETE STARTUP PLAN covering each section below in depth:
+
+1. PROBLEM -- Quantify the pain. Who suffers? How much do they pay today for inferior solutions? What triggers the purchase decision? Provide specific numbers or estimates where possible.
+
+2. SOLUTION -- Describe the product concretely. What does the user see and do? What is the core technical insight? How is this 10x better than the status quo (not 2x -- investors want a step change)?
+
+3. MARKET -- Break down TAM/SAM/SOM with reasoning:
+   - TAM: Total addressable market (entire category)
+   - SAM: Serviceable addressable market (your segment)
+   - SOM: Serviceable obtainable market (realistic year 1-2 capture)
+   - Growth rate and trajectory
+
+4. BUSINESS MODEL -- Revenue model, pricing strategy, unit economics sketch:
+   - How do you make money? (subscription, transaction fee, usage-based, etc.)
+   - What is your target price point and why?
+   - Rough LTV/CAC framework (even directional estimates help)
+
+5. GO-TO-MARKET -- Your first 100 customers strategy:
+   - Where do they hang out? How do you reach them?
+   - What is your launch sequence? (beta -> waitlist -> paid?)
+   - Key partnerships or channels
+   - How does growth compound after initial traction?
+
+6. COMPETITIVE LANDSCAPE -- Name at least 3 real or potential competitors:
+   - For each: their key strength, their key weakness, and why you win against them
+   - Be honest about where competitors are strong
+
+7. RISKS AND MITIGATIONS -- At least 3 risks rated by severity:
+   - For each risk: what could go wrong, how severe (low/medium/high/critical), and your specific mitigation plan
+   - Include at least one technical risk and one market risk
+
+8. 12-MONTH ROADMAP -- What you build and achieve with seed funding:
+   - Month 1-3: What's the MVP?
+   - Month 4-6: What do you learn and iterate on?
+   - Month 7-12: What milestones prove Series A readiness?
+
+9. FUNDING ASK -- How much seed capital, what it buys, what metrics you'll hit:
+   - Dollar amount and runway it provides
+   - Key hires and infrastructure
+   - The milestones that prove the business works
+
+Return a JSON object with these exact fields:
+- idea_id (string)
+- founder_provider (string, MUST be exactly: {provider_name})
+- problem (string, detailed as described above)
+- solution (string, detailed as described above)
+- market (object with keys: tam, sam, som, growth_rate, reasoning -- all strings)
+- business_model (object with keys: revenue_model, pricing, unit_economics -- all strings)
+- go_to_market (string, detailed as described above)
+- competitive_landscape (array of objects, each with keys: competitor, strength, weakness, our_advantage -- all strings, minimum 3 entries)
+- risks_and_mitigations (array of objects, each with keys: risk, severity [one of: low, medium, high, critical], mitigation -- all strings, minimum 3 entries)
+- twelve_month_roadmap (string, detailed as described above)
+- funding_ask (object with keys: amount, use_of_funds, target_metrics -- all strings)
+
+Return ONLY valid JSON. No markdown fences, no explanatory text before or after.

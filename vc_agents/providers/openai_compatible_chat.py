@@ -1,10 +1,10 @@
-"""OpenAI-compatible chat completion provider."""
+"""OpenAI-compatible chat completion provider (DeepSeek, Gemini, etc.)."""
 
 from __future__ import annotations
 
 import os
 
-from vc_agents.providers.base import BaseProvider, ProviderConfig
+from vc_agents.providers.base import BaseProvider, ProviderConfig, extract_json
 
 
 class OpenAICompatibleChat(BaseProvider):
@@ -24,7 +24,7 @@ class OpenAICompatibleChat(BaseProvider):
         super().__init__(config)
         self.model = model
 
-    def generate(self, prompt: str, max_tokens: int = 1200, max_retries: int = 3) -> str:
+    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
         body = {
@@ -32,8 +32,8 @@ class OpenAICompatibleChat(BaseProvider):
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
         }
-        payload = self._request_json("POST", "/chat/completions", headers, body, max_retries)
+        payload = self._request_json("POST", "/chat/completions", headers, body)
         choices = payload.get("choices", [])
         if not choices or not choices[0].get("message", {}).get("content"):
             raise ValueError("Chat completion API returned empty message content.")
-        return choices[0]["message"]["content"]
+        return extract_json(choices[0]["message"]["content"])

@@ -1,0 +1,31 @@
+You are a startup founder iterating on your startup plan after receiving feedback from 3 expert advisors. This is iteration round {round_number} of up to 3.
+
+YOUR CURRENT PLAN:
+{plan_json}
+
+ADVISOR FEEDBACK THIS ROUND:
+{reviews_json}
+
+INSTRUCTIONS:
+1. Read each advisor's feedback carefully. They have different expertise areas -- weight their feedback accordingly.
+2. Address the most critical issues first. If multiple advisors flag the same problem, it's almost certainly real.
+3. Don't just acknowledge feedback -- actually change the relevant sections of your plan.
+4. If you disagree with a piece of feedback, you can push back, but explain why with evidence.
+5. Be honest about what you changed and what you didn't.
+
+PRODUCE an updated startup plan that addresses the feedback. The plan must contain ALL the same fields as before, with improvements applied.
+
+Return a JSON object with these exact fields:
+- idea_id (string)
+- founder_provider (string, MUST be exactly: {provider_name})
+- problem (string)
+- solution (string)
+- market (object with keys: tam, sam, som, growth_rate, reasoning)
+- business_model (object with keys: revenue_model, pricing, unit_economics)
+- go_to_market (string)
+- competitive_landscape (array of objects with keys: competitor, strength, weakness, our_advantage -- minimum 3)
+- risks_and_mitigations (array of objects with keys: risk, severity [low/medium/high/critical], mitigation -- minimum 3)
+- twelve_month_roadmap (string)
+- funding_ask (object with keys: amount, use_of_funds, target_metrics)
+
+Return ONLY valid JSON. No markdown fences, no explanatory text before or after.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vc_agents.providers.base import BaseProvider, ProviderConfig
+from vc_agents.providers.base import BaseProvider, ProviderConfig, extract_json
 
 
 class AnthropicMessages(BaseProvider):
@@ -20,7 +20,7 @@ class AnthropicMessages(BaseProvider):
         super().__init__(config)
         self.model = model
 
-    def generate(self, prompt: str, max_tokens: int = 1200, max_retries: int = 3) -> str:
+    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
         api_key = self.config.require_api_key()
         headers = {
             "x-api-key": api_key,
@@ -31,8 +31,8 @@ class AnthropicMessages(BaseProvider):
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": prompt}],
         }
-        payload = self._request_json("POST", "/messages", headers, body, max_retries)
+        payload = self._request_json("POST", "/messages", headers, body)
         content = payload.get("content", [])
         if not content or not content[0].get("text"):
             raise ValueError("Anthropic Messages API returned empty content.")
-        return content[0]["text"]
+        return extract_json(content[0]["text"])

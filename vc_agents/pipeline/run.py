@@ -1,4 +1,9 @@
-"""Run the VC agents pipeline."""
+"""Run the VC AI Incubator pipeline -- 3-stage founder/advisor simulation.
+
+Stage 1: Ideate and Select -- each founder proposes ideas, gets feedback, picks the best
+Stage 2: Build and Iterate -- founders build plans, advisors review, founders iterate
+Stage 3: Seed Pitch -- founders pitch, investors evaluate, portfolio report generated
+"""
 
 from __future__ import annotations
 
@@ -15,20 +20,59 @@ import pandas as pd
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
+from vc_agents.logging_config import get_logger, setup_logging
 from vc_agents.providers import (
     AnthropicMessages,
     MockProvider,
     OpenAICompatibleChat,
     OpenAIResponses,
 )
-from vc_agents.providers.base import ProviderError
-from vc_agents.schemas import IDEA_CARD_SCHEMA, ONE_PAGER_SCHEMA, SCORE_SCHEMA
+from vc_agents.providers.base import BaseProvider, ProviderError, extract_json
+from vc_agents.schemas import (
+    ADVISOR_REVIEW_SCHEMA,
+    FEEDBACK_SCHEMA,
+    IDEA_CARD_SCHEMA,
+    INVESTOR_DECISION_SCHEMA,
+    PITCH_SCHEMA,
+    SELECTION_SCHEMA,
+    STARTUP_PLAN_SCHEMA,
+)
 
+logger = get_logger("pipeline")
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 
-EXPECTED_IDEAS = 20
-EXPECTED_ONE_PAGERS = 20
-EXPECTED_SCORES = 60
+# Advisor role definitions for Stage 2
+ADVISOR_ROLES = [
+    {
+        "key": "market_strategist",
+        "display": "Market Strategist",
+        "description": (
+            "You focus on market sizing, go-to-market strategy, competitive positioning, "
+            "and customer acquisition. You've helped 20+ startups find product-market fit."
+        ),
+    },
+    {
+        "key": "technical_advisor",
+        "display": "Technical Advisor",
+        "description": (
+            "You focus on technical feasibility, product architecture, engineering risks, "
+            "and the 12-month roadmap. You've been CTO at 3 startups and led teams of 5-50."
+        ),
+    },
+    {
+        "key": "financial_advisor",
+        "display": "Financial Advisor",
+        "description": (
+            "You focus on unit economics, funding strategy, financial projections, and "
+            "capital efficiency. You've helped structure 50+ seed rounds."
+        ),
+    },
+]
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def load_prompt(name: str) -> str:
@@ -39,8 +83,9 @@ def load_prompt(name: str) -> str:
 
 
 def parse_json(text: str, context: str) -> dict[str, Any]:
+    cleaned = extract_json(text)
     try:
-        return json.loads(text)
+        return json.loads(cleaned)
     except json.JSONDecodeError as exc:
         snippet = text[:500].replace("\n", " ")
         raise ValueError(f"Invalid JSON from {context}: {exc}. Snippet: {snippet}") from exc
@@ -53,40 +98,414 @@ def validate_schema(data: dict[str, Any], schema: dict[str, Any], context: str) 
         raise ValueError(f"Schema validation failed for {context}: {exc.message}") from exc
 
 
-def ensure_count(records: list[Any], expected: int, label: str) -> None:
-    if len(records) != expected:
-        raise RuntimeError(f"Expected {expected} {label}, got {len(records)}")
-
-
 def retry_json_call(
-    provider: Any,
+    provider: BaseProvider,
     prompt: str,
     schema: dict[str, Any] | None,
     context: str,
     max_retries: int,
 ) -> dict[str, Any]:
+    """Call a provider and parse/validate JSON, retrying on parse/schema failures.
+
+    HTTP-level retries are handled inside the provider. This function only
+    retries on JSON parsing and schema validation errors.
+    """
     last_error: Exception | None = None
     for attempt in range(1, max_retries + 1):
         try:
-            text = provider.generate(prompt, max_retries=max_retries)
+            start = time.monotonic()
+            text = provider.generate(prompt)
+            latency = (time.monotonic() - start) * 1000
+            logger.debug("%s responded in %.0fms", provider.name, latency)
+
             data = parse_json(text, context)
             if schema is not None:
                 validate_schema(data, schema, context)
             return data
-        except Exception as exc:  # noqa: BLE001 - re-raise with context
+        except Exception as exc:
             last_error = exc
+            logger.warning(
+                "%s attempt %d/%d failed: %s", context, attempt, max_retries, exc
+            )
             if attempt == max_retries:
                 break
     raise RuntimeError(f"{context} failed after {max_retries} attempts: {last_error}")
 
 
-def run_pipeline(use_mock: bool, concurrency: int, retry_max: int) -> Path:
-    idea_prompt = load_prompt("ideas_prompt.txt")
-    one_pager_prompt = load_prompt("one_pager_prompt.txt")
-    score_prompt = load_prompt("score_prompt.txt")
+def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+
+def _map_concurrently(func: Any, items: list[Any], concurrency: int) -> Iterable[Any]:
+    if concurrency <= 1:
+        for item in items:
+            yield func(item)
+        return
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        for result in executor.map(func, items):
+            yield result
+
+
+# ---------------------------------------------------------------------------
+# Stage 1: Ideate and Select
+# ---------------------------------------------------------------------------
+
+
+def run_stage1(
+    providers: list[BaseProvider],
+    ideas_per_provider: int,
+    retry_max: int,
+    concurrency: int,
+    run_dir: Path,
+) -> dict[str, dict[str, Any]]:
+    """Each founder proposes ideas, gets cross-feedback, picks the best one.
+
+    Returns: dict mapping provider_name -> selection result (with refined_idea).
+    """
+    logger.info("=== STAGE 1: Ideate and Select ===")
+
+    idea_prompt = load_prompt("ideas_prompt.txt")
+    feedback_prompt = load_prompt("feedback_prompt.txt")
+    select_prompt = load_prompt("select_prompt.txt")
+
+    # --- Step 1a: Generate ideas ---
+    logger.info("Step 1a: Generating ideas (%d providers x %d ideas)", len(providers), ideas_per_provider)
+    all_ideas: dict[str, list[dict[str, Any]]] = {}  # provider_name -> [idea_cards]
+
+    for provider in providers:
+        prompt = idea_prompt.format(provider_name=provider.name)
+        payload = retry_json_call(
+            provider, prompt, schema=None,
+            context=f"idea generation ({provider.name})", max_retries=retry_max,
+        )
+        idea_items = payload.get("ideas")
+        if not isinstance(idea_items, list):
+            raise ValueError(f"Idea generation ({provider.name}) did not return an ideas list.")
+
+        for item in idea_items:
+            validate_schema(item, IDEA_CARD_SCHEMA, f"idea card ({provider.name})")
+
+        all_ideas[provider.name] = idea_items
+        logger.info("  %s generated %d ideas", provider.name, len(idea_items))
+
+    # Flatten for output
+    flat_ideas = [idea for ideas in all_ideas.values() for idea in ideas]
+    _write_jsonl(run_dir / "stage1_ideas.jsonl", flat_ideas)
+
+    # --- Step 1b: Cross-feedback ---
+    logger.info("Step 1b: Cross-feedback (each idea reviewed by other %d models)", len(providers) - 1)
+    all_feedback: list[dict[str, Any]] = []
+
+    def feedback_task(task: dict[str, Any]) -> dict[str, Any]:
+        idea = task["idea"]
+        reviewer = task["reviewer"]
+        prompt = feedback_prompt.format(
+            provider_name=reviewer.name,
+            idea_json=json.dumps(idea, indent=2),
+        )
+        result = retry_json_call(
+            reviewer, prompt, schema=FEEDBACK_SCHEMA,
+            context=f"feedback ({reviewer.name}/{idea['idea_id']})",
+            max_retries=retry_max,
+        )
+        return result
+
+    tasks = []
+    for provider_name, ideas in all_ideas.items():
+        for idea in ideas:
+            for reviewer in providers:
+                if reviewer.name != provider_name:
+                    tasks.append({"idea": idea, "reviewer": reviewer})
+
+    all_feedback = list(_map_concurrently(feedback_task, tasks, concurrency))
+    _write_jsonl(run_dir / "stage1_feedback.jsonl", all_feedback)
+    logger.info("  Collected %d feedback items", len(all_feedback))
+
+    # --- Step 1c: Each founder selects best idea ---
+    logger.info("Step 1c: Founders select best idea")
+    selections: dict[str, dict[str, Any]] = {}
+
+    for provider in providers:
+        my_ideas = all_ideas[provider.name]
+        my_idea_ids = {idea["idea_id"] for idea in my_ideas}
+        my_feedback = [f for f in all_feedback if f["idea_id"] in my_idea_ids]
+
+        # Group feedback by idea for readability
+        feedback_by_idea: dict[str, list[dict[str, Any]]] = {}
+        for fb in my_feedback:
+            feedback_by_idea.setdefault(fb["idea_id"], []).append(fb)
+
+        prompt = select_prompt.format(
+            provider_name=provider.name,
+            ideas_json=json.dumps(my_ideas, indent=2),
+            feedback_json=json.dumps(feedback_by_idea, indent=2),
+        )
+        result = retry_json_call(
+            provider, prompt, schema=SELECTION_SCHEMA,
+            context=f"selection ({provider.name})", max_retries=retry_max,
+        )
+        selections[provider.name] = result
+        logger.info(
+            "  %s selected idea: %s", provider.name, result["selected_idea_id"]
+        )
+
+    _write_jsonl(run_dir / "stage1_selections.jsonl", list(selections.values()))
+    return selections
+
+
+# ---------------------------------------------------------------------------
+# Stage 2: Build and Iterate
+# ---------------------------------------------------------------------------
+
+
+def run_stage2(
+    providers: list[BaseProvider],
+    selections: dict[str, dict[str, Any]],
+    retry_max: int,
+    concurrency: int,
+    max_iterations: int,
+    run_dir: Path,
+) -> dict[str, dict[str, Any]]:
+    """Each founder builds a plan; advisors review; founders iterate until ready.
+
+    Returns: dict mapping provider_name -> final startup plan.
+    """
+    logger.info("=== STAGE 2: Build and Iterate (max %d rounds) ===", max_iterations)
+
+    build_prompt = load_prompt("build_prompt.txt")
+    advisor_prompt = load_prompt("advisor_review_prompt.txt")
+    iterate_prompt = load_prompt("iterate_prompt.txt")
+
+    final_plans: dict[str, dict[str, Any]] = {}
+    all_reviews: list[dict[str, Any]] = []
+
+    for founder in providers:
+        selection = selections[founder.name]
+        idea = selection["refined_idea"]
+        idea_id = idea["idea_id"]
+        logger.info("  Building plan for %s (idea: %s)", founder.name, idea_id)
+
+        # --- Initial build ---
+        prompt = build_prompt.format(
+            provider_name=founder.name,
+            idea_json=json.dumps(idea, indent=2),
+            context_section="This is your initial plan. Build it from scratch based on the idea above.",
+        )
+        plan = retry_json_call(
+            founder, prompt, schema=STARTUP_PLAN_SCHEMA,
+            context=f"build ({founder.name}/{idea_id})", max_retries=retry_max,
+        )
+        _write_jsonl(run_dir / f"stage2_{founder.name}_plan_v0.jsonl", [plan])
+
+        # --- Iteration rounds ---
+        for round_num in range(1, max_iterations + 1):
+            logger.info("  Round %d/%d for %s", round_num, max_iterations, founder.name)
+
+            # Advisors review
+            advisors = [p for p in providers if p.name != founder.name]
+            round_reviews: list[dict[str, Any]] = []
+
+            for i, advisor in enumerate(advisors):
+                role = ADVISOR_ROLES[i % len(ADVISOR_ROLES)]
+
+                # Build previous feedback section
+                prev_feedback = [
+                    r for r in all_reviews
+                    if r["idea_id"] == idea_id and r["reviewer_provider"] == advisor.name
+                ]
+                prev_section = ""
+                if prev_feedback:
+                    prev_section = (
+                        "PREVIOUS FEEDBACK YOU GAVE (check if it was addressed):\n"
+                        + json.dumps(prev_feedback, indent=2)
+                    )
+
+                prompt = advisor_prompt.format(
+                    provider_name=advisor.name,
+                    advisor_role=role["key"],
+                    advisor_role_display=role["display"],
+                    advisor_role_description=role["description"],
+                    plan_json=json.dumps(plan, indent=2),
+                    previous_feedback_section=prev_section,
+                )
+                review = retry_json_call(
+                    advisor, prompt, schema=ADVISOR_REVIEW_SCHEMA,
+                    context=f"review ({advisor.name}/{idea_id}/round{round_num})",
+                    max_retries=retry_max,
+                )
+                round_reviews.append(review)
+                all_reviews.append(review)
+
+            _write_jsonl(
+                run_dir / f"stage2_{founder.name}_reviews_round{round_num}.jsonl",
+                round_reviews,
+            )
+
+            # Check convergence
+            all_ready = all(r.get("ready_for_pitch", False) for r in round_reviews)
+            avg_score = sum(r["readiness_score"] for r in round_reviews) / len(round_reviews)
+            logger.info(
+                "    Avg readiness: %.1f | All ready: %s",
+                avg_score, all_ready,
+            )
+
+            if all_ready and avg_score >= 7:
+                logger.info("    Converged! All advisors signal ready for pitch.")
+                break
+
+            if round_num == max_iterations:
+                logger.info("    Max iterations reached. Proceeding to pitch anyway.")
+                break
+
+            # Founder iterates
+            prompt = iterate_prompt.format(
+                provider_name=founder.name,
+                round_number=round_num,
+                plan_json=json.dumps(plan, indent=2),
+                reviews_json=json.dumps(round_reviews, indent=2),
+            )
+            plan = retry_json_call(
+                founder, prompt, schema=STARTUP_PLAN_SCHEMA,
+                context=f"iterate ({founder.name}/{idea_id}/round{round_num})",
+                max_retries=retry_max,
+            )
+            _write_jsonl(
+                run_dir / f"stage2_{founder.name}_plan_v{round_num}.jsonl",
+                [plan],
+            )
+
+        final_plans[founder.name] = plan
+
+    _write_jsonl(run_dir / "stage2_final_plans.jsonl", list(final_plans.values()))
+    _write_jsonl(run_dir / "stage2_all_reviews.jsonl", all_reviews)
+    return final_plans
+
+
+# ---------------------------------------------------------------------------
+# Stage 3: Seed Pitch
+# ---------------------------------------------------------------------------
+
+
+def run_stage3(
+    providers: list[BaseProvider],
+    final_plans: dict[str, dict[str, Any]],
+    retry_max: int,
+    concurrency: int,
+    run_dir: Path,
+) -> pd.DataFrame:
+    """Each founder pitches; other models evaluate as investors.
+
+    Returns: portfolio report DataFrame.
+    """
+    logger.info("=== STAGE 3: Seed Pitch ===")
+
+    pitch_prompt_tmpl = load_prompt("pitch_prompt.txt")
+    investor_prompt_tmpl = load_prompt("investor_eval_prompt.txt")
+
+    all_pitches: list[dict[str, Any]] = []
+    all_decisions: list[dict[str, Any]] = []
+
+    for founder in providers:
+        plan = final_plans[founder.name]
+        idea_id = plan["idea_id"]
+        logger.info("  %s preparing pitch for %s", founder.name, idea_id)
+
+        # Founder creates pitch
+        prompt = pitch_prompt_tmpl.format(
+            provider_name=founder.name,
+            plan_json=json.dumps(plan, indent=2),
+        )
+        pitch = retry_json_call(
+            founder, prompt, schema=PITCH_SCHEMA,
+            context=f"pitch ({founder.name}/{idea_id})", max_retries=retry_max,
+        )
+        all_pitches.append(pitch)
+
+        # Investors evaluate
+        investors = [p for p in providers if p.name != founder.name]
+        for investor in investors:
+            prompt = investor_prompt_tmpl.format(
+                provider_name=investor.name,
+                pitch_json=json.dumps(pitch, indent=2),
+                plan_json=json.dumps(plan, indent=2),
+            )
+            decision = retry_json_call(
+                investor, prompt, schema=INVESTOR_DECISION_SCHEMA,
+                context=f"invest ({investor.name}/{idea_id})", max_retries=retry_max,
+            )
+            all_decisions.append(decision)
+            logger.info(
+                "    %s -> %s (conviction: %s)",
+                investor.name, decision["decision"], decision["conviction_score"],
+            )
+
+    _write_jsonl(run_dir / "stage3_pitches.jsonl", all_pitches)
+    _write_jsonl(run_dir / "stage3_decisions.jsonl", all_decisions)
+
+    # Build portfolio report
+    report = _build_portfolio_report(providers, all_pitches, all_decisions, final_plans)
+    report.to_csv(run_dir / "portfolio_report.csv", index=False)
+    logger.info("Portfolio report saved to %s", run_dir / "portfolio_report.csv")
+
+    return report
+
+
+def _build_portfolio_report(
+    providers: list[BaseProvider],
+    pitches: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    plans: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    """Aggregate investor decisions into a ranked portfolio report."""
+    rows = []
+    for provider in providers:
+        plan = plans[provider.name]
+        idea_id = plan["idea_id"]
+        pitch = next((p for p in pitches if p["idea_id"] == idea_id), None)
+
+        provider_decisions = [d for d in decisions if d["idea_id"] == idea_id]
+        invest_count = sum(1 for d in provider_decisions if d["decision"] == "invest")
+        avg_conviction = (
+            sum(d["conviction_score"] for d in provider_decisions) / len(provider_decisions)
+            if provider_decisions else 0
+        )
+
+        rows.append({
+            "rank": 0,  # filled after sorting
+            "founder": provider.name,
+            "idea_id": idea_id,
+            "elevator_pitch": pitch["elevator_pitch"] if pitch else "",
+            "investors_in": invest_count,
+            "investors_total": len(provider_decisions),
+            "avg_conviction": round(avg_conviction, 1),
+            "funding_ask": plan.get("funding_ask", {}).get("amount", ""),
+        })
+
+    # Sort by invest count (desc), then conviction (desc)
+    rows.sort(key=lambda r: (-r["investors_in"], -r["avg_conviction"]))
+    for i, row in enumerate(rows):
+        row["rank"] = i + 1
+
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline orchestrator
+# ---------------------------------------------------------------------------
+
+
+def run_pipeline(
+    use_mock: bool,
+    concurrency: int,
+    retry_max: int,
+    max_iterations: int = 3,
+    ideas_per_provider: int = 5,
+) -> Path:
+    """Run the complete 3-stage incubator pipeline."""
     if use_mock:
-        providers = [
+        providers: list[BaseProvider] = [
             MockProvider("openai"),
             MockProvider("anthropic"),
             MockProvider("deepseek"),
@@ -111,101 +530,35 @@ def run_pipeline(use_mock: bool, concurrency: int, retry_max: int) -> Path:
 
     run_dir = Path("out") / f"run_{int(time.time())}"
     run_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Pipeline output: %s", run_dir)
 
     try:
-        ideas: list[dict[str, Any]] = []
-        for provider in providers:
-            prompt = idea_prompt.format(provider_name=provider.name)
-            payload = retry_json_call(
-                provider,
-                prompt,
-                schema=None,
-                context=f"idea generation ({provider.name})",
-                max_retries=retry_max,
-            )
-            idea_items = payload.get("ideas")
-            if not isinstance(idea_items, list):
-                raise ValueError(
-                    f"Idea generation ({provider.name}) did not return an ideas list."
-                )
-            for item in idea_items:
-                validate_schema(item, IDEA_CARD_SCHEMA, f"idea card ({provider.name})")
-                if item["proposer_provider"] != provider.name:
-                    raise ValueError(
-                        "Idea card proposer_provider mismatch: "
-                        f"expected {provider.name}, got {item['proposer_provider']}"
-                    )
-                ideas.append(item)
-
-        ensure_count(ideas, EXPECTED_IDEAS, "idea cards")
-
-        def one_pager_task(item: dict[str, Any]) -> dict[str, Any]:
-            provider = next(p for p in providers if p.name == item["proposer_provider"])
-            prompt = one_pager_prompt.format(provider_name=provider.name, idea_json=json.dumps(item))
-            payload = retry_json_call(
-                provider,
-                prompt,
-                schema=ONE_PAGER_SCHEMA,
-                context=f"one-pager ({provider.name}/{item['idea_id']})",
-                max_retries=retry_max,
-            )
-            if payload["one_pager_provider"] != provider.name:
-                raise ValueError(
-                    "One-pager provider mismatch: "
-                    f"expected {provider.name}, got {payload['one_pager_provider']}"
-                )
-            return payload
-
-        one_pagers: list[dict[str, Any]] = list(
-            _map_concurrently(one_pager_task, ideas, concurrency)
+        # Stage 1: Ideate and Select
+        selections = run_stage1(
+            providers, ideas_per_provider, retry_max, concurrency, run_dir,
         )
-        ensure_count(one_pagers, EXPECTED_ONE_PAGERS, "one-pagers")
 
-        one_pager_index = {item["idea_id"]: item for item in one_pagers}
-
-        def score_tasks() -> Iterable[dict[str, Any]]:
-            for idea in ideas:
-                for scorer in providers:
-                    if scorer.name == idea["proposer_provider"]:
-                        continue
-                    yield {"idea": idea, "scorer": scorer}
-
-        def score_task(task: dict[str, Any]) -> dict[str, Any]:
-            idea = task["idea"]
-            scorer = task["scorer"]
-            one_pager = one_pager_index[idea["idea_id"]]
-            prompt = score_prompt.format(
-                provider_name=scorer.name,
-                idea_json=json.dumps(idea),
-                one_pager_json=json.dumps(one_pager),
-            )
-            payload = retry_json_call(
-                scorer,
-                prompt,
-                schema=SCORE_SCHEMA,
-                context=f"score ({scorer.name}/{idea['idea_id']})",
-                max_retries=retry_max,
-            )
-            if payload["scorer_provider"] != scorer.name:
-                raise ValueError(
-                    "Score provider mismatch: "
-                    f"expected {scorer.name}, got {payload['scorer_provider']}"
-                )
-            return payload
-
-        scores: list[dict[str, Any]] = list(
-            _map_concurrently(score_task, list(score_tasks()), concurrency)
+        # Stage 2: Build and Iterate
+        final_plans = run_stage2(
+            providers, selections, retry_max, concurrency, max_iterations, run_dir,
         )
-        ensure_count(scores, EXPECTED_SCORES, "scores")
 
-        _write_jsonl(run_dir / "ideas.jsonl", ideas)
-        _write_jsonl(run_dir / "one_pagers.jsonl", one_pagers)
-        _write_jsonl(run_dir / "scores.jsonl", scores)
+        # Stage 3: Seed Pitch
+        report = run_stage3(
+            providers, final_plans, retry_max, concurrency, run_dir,
+        )
 
-        aggregate = _aggregate_scores(ideas, scores)
-        aggregate.to_csv(run_dir / "aggregate.csv", index=False)
+        # Print summary
+        logger.info("\n=== PORTFOLIO SUMMARY ===")
+        for _, row in report.iterrows():
+            logger.info(
+                "  #%d %s (%s) -- %d/%d investors, conviction %.1f",
+                row["rank"], row["founder"], row["idea_id"],
+                row["investors_in"], row["investors_total"], row["avg_conviction"],
+            )
 
         return run_dir
+
     except ProviderError as exc:
         raise RuntimeError(str(exc)) from exc
     finally:
@@ -213,46 +566,39 @@ def run_pipeline(use_mock: bool, concurrency: int, retry_max: int) -> Path:
             provider.close()
 
 
-def _aggregate_scores(ideas: list[dict[str, Any]], scores: list[dict[str, Any]]) -> pd.DataFrame:
-    score_df = pd.DataFrame(scores)
-    grouped = score_df.groupby(["idea_id", "proposer_provider"], as_index=False)["score"].mean()
-    grouped = grouped.rename(columns={"score": "avg_score"})
-    idea_df = pd.DataFrame(ideas)[["idea_id", "title", "summary", "proposer_provider"]]
-    merged = grouped.merge(idea_df, on=["idea_id", "proposer_provider"], how="left")
-    merged["scores_count"] = score_df.groupby(["idea_id", "proposer_provider"])["score"].count().values
-    return merged[["idea_id", "proposer_provider", "title", "summary", "avg_score", "scores_count"]]
-
-
-def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
-    with path.open("w", encoding="utf-8") as handle:
-        for record in records:
-            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-
-def _map_concurrently(func, items: list[Any], concurrency: int) -> Iterable[Any]:
-    if concurrency <= 1:
-        for item in items:
-            yield func(item)
-        return
-    with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        for result in executor.map(func, items):
-            yield result
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the VC agents pipeline")
+    parser = argparse.ArgumentParser(
+        description="Run the VC AI Incubator pipeline (3 stages)"
+    )
     parser.add_argument("--use-mock", action="store_true", help="Use mock providers")
     parser.add_argument(
-        "--concurrency",
-        type=int,
+        "--concurrency", type=int,
         default=int(os.getenv("CONCURRENCY", "1")),
         help="Number of concurrent requests (default: 1)",
     )
     parser.add_argument(
-        "--retry-max",
-        type=int,
+        "--retry-max", type=int,
         default=int(os.getenv("RETRY_MAX", "3")),
-        help="Max retries for provider calls (default: 3)",
+        help="Max retries for JSON parse/schema failures (default: 3)",
+    )
+    parser.add_argument(
+        "--max-iterations", type=int,
+        default=int(os.getenv("MAX_ITERATIONS", "3")),
+        help="Max advisor feedback rounds in Stage 2 (default: 3)",
+    )
+    parser.add_argument(
+        "--ideas-per-provider", type=int,
+        default=int(os.getenv("IDEAS_PER_PROVIDER", "5")),
+        help="Ideas each provider generates in Stage 1 (default: 5)",
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Enable debug logging",
     )
     return parser.parse_args(argv)
 
@@ -260,9 +606,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     load_dotenv()
     args = parse_args(argv or sys.argv[1:])
+    setup_logging(verbose=args.verbose)
+
     use_mock = args.use_mock or os.getenv("USE_MOCK", "0") == "1"
-    run_dir = run_pipeline(use_mock=use_mock, concurrency=args.concurrency, retry_max=args.retry_max)
-    print(f"Pipeline complete. Outputs in {run_dir}")
+
+    run_dir = run_pipeline(
+        use_mock=use_mock,
+        concurrency=args.concurrency,
+        retry_max=args.retry_max,
+        max_iterations=args.max_iterations,
+        ideas_per_provider=args.ideas_per_provider,
+    )
+    logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0
 
 

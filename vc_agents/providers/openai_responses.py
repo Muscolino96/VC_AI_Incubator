@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from vc_agents.providers.base import BaseProvider, ProviderConfig
+from vc_agents.providers.base import BaseProvider, ProviderConfig, extract_json
 
 
 class OpenAIResponses(BaseProvider):
@@ -33,7 +33,7 @@ class OpenAIResponses(BaseProvider):
             return "\n".join(texts)
         return payload.get("output_text", "")
 
-    def _call(self, prompt: str, max_tokens: int, max_retries: int) -> str:
+    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
         body = {
@@ -41,11 +41,8 @@ class OpenAIResponses(BaseProvider):
             "input": prompt,
             "max_output_tokens": max_tokens,
         }
-        payload = self._request_json("POST", "/responses", headers, body, max_retries)
+        payload = self._request_json("POST", "/responses", headers, body)
         text = self._extract_output_text(payload)
         if not text:
             raise ValueError("OpenAI Responses API returned empty output_text.")
-        return text
-
-    def generate(self, prompt: str, max_tokens: int = 1200, max_retries: int = 3) -> str:
-        return self._call(prompt, max_tokens, max_retries)
+        return extract_json(text)

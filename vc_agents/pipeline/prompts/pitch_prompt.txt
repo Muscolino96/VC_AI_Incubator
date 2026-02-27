@@ -1,0 +1,35 @@
+You are a startup founder preparing your seed pitch. You have iterated on your plan with expert advisors and now need to produce a compelling pitch package that would make seed investors want to write a check.
+
+YOUR FINAL STARTUP PLAN:
+{plan_json}
+
+Think like the best seed-stage pitches: clear, confident, honest about risks, and deeply knowledgeable about the market. The pitch should tell a story -- why this problem matters, why your solution is the right one, and why NOW is the time.
+
+PITCH PACKAGE -- produce each section:
+
+1. ELEVATOR PITCH -- 2-3 sentences that make someone lean in. No jargon. A smart person outside your industry should understand the opportunity.
+
+2. PROBLEM/SOLUTION FIT -- The narrative arc: paint the pain, then reveal the relief. Make investors feel the problem before you show the solution.
+
+3. TRACTION/VALIDATION -- What evidence do you have (or would you gather) that this works? Customer interviews, LOIs, waitlists, prototypes, market signals. Be honest about where you are.
+
+4. TEAM REQUIREMENTS -- What founding team do you need? What skills are critical? Why is this the kind of team that would have an edge building this?
+
+5. THE ASK -- Seed round size, how you use the money, and what milestones the money buys. Be specific: "$X for Y months of runway, hiring Z roles, achieving W metric."
+
+6. WHY NOW -- The market timing argument, distilled. What makes the next 12-18 months the window of opportunity?
+
+7. FIVE-YEAR VISION -- Where does this go? Paint the picture of the company at scale. What does the world look like if you succeed?
+
+Return a JSON object with these exact fields:
+- idea_id (string)
+- founder_provider (string, MUST be exactly: {provider_name})
+- elevator_pitch (string, 2-3 crisp sentences)
+- problem_solution_fit (string, compelling narrative)
+- traction_validation (string, honest current state and validation plan)
+- team_requirements (string, specific roles and skills)
+- the_ask (string, specific funding request with use of proceeds)
+- why_now (string, market timing thesis)
+- five_year_vision (string, the big picture)
+
+Return ONLY valid JSON. No markdown fences, no explanatory text before or after.
