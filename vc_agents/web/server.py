@@ -132,17 +132,18 @@ async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
     config = config or {}
     run_id = f"run_{uuid.uuid4().hex[:12]}"
 
-    _runs[run_id] = {
-        "run_id": run_id,
-        "status": "starting",
-        "config": config,
-        "events": [],
-        "last_event": None,
-        "run_dir": None,
-        "error": None,
-        "started_at": None,
-        "completed_at": None,
-    }
+    with _runs_lock:
+        _runs[run_id] = {
+            "run_id": run_id,
+            "status": "starting",
+            "config": config,
+            "events": [],
+            "last_event": None,
+            "run_dir": None,
+            "error": None,
+            "started_at": None,
+            "completed_at": None,
+        }
 
     loop = asyncio.get_running_loop()
     thread = threading.Thread(
@@ -156,26 +157,30 @@ async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
 @app.get("/api/runs")
 async def list_runs() -> JSONResponse:
     """List all runs (active and completed)."""
-    summaries = []
-    for run in _runs.values():
-        summaries.append({
-            "run_id": run["run_id"],
-            "status": run["status"],
-            "config": run["config"],
-            "started_at": run["started_at"],
-            "completed_at": run["completed_at"],
-            "event_count": len(run["events"]),
-            "error": run["error"],
-        })
+    with _runs_lock:
+        summaries = [
+            {
+                "run_id": run["run_id"],
+                "status": run["status"],
+                "config": run["config"],
+                "started_at": run["started_at"],
+                "completed_at": run["completed_at"],
+                "event_count": len(run["events"]),
+                "error": run["error"],
+            }
+            for run in _runs.values()
+        ]
     return JSONResponse(summaries)
 
 
 @app.get("/api/runs/{run_id}")
 async def get_run(run_id: str) -> JSONResponse:
     """Get full details for a specific run."""
-    if run_id not in _runs:
-        return JSONResponse({"error": "Run not found"}, status_code=404)
-    return JSONResponse(_runs[run_id])
+    with _runs_lock:
+        if run_id not in _runs:
+            return JSONResponse({"error": "Run not found"}, status_code=404)
+        data = dict(_runs[run_id])
+    return JSONResponse(data)
 
 
 @app.get("/api/runs/{run_id}/results")

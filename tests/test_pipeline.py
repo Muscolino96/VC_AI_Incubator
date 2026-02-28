@@ -102,6 +102,30 @@ class TestPipelineMock:
         assert len(decisions) == 12
 
 
+    def test_resume_skips_completed_stages(self, tmp_path, monkeypatch):
+        """Run pipeline then resume — should skip all stages and return same dir."""
+        monkeypatch.chdir(tmp_path)
+
+        run_dir = run_pipeline(
+            use_mock=True, concurrency=1, retry_max=1,
+            max_iterations=1, ideas_per_provider=5,
+        )
+
+        checkpoint_path = run_dir / "checkpoint.json"
+        assert checkpoint_path.exists()
+        checkpoint = json.loads(checkpoint_path.read_text())
+        assert checkpoint["stage1_complete"] is True
+        assert checkpoint["stage2_complete"] is True
+        assert checkpoint["stage3_complete"] is True
+
+        resumed_dir = run_pipeline(
+            use_mock=True, concurrency=1, retry_max=1,
+            max_iterations=1, ideas_per_provider=5,
+            resume_dir=run_dir,
+        )
+        assert resumed_dir == run_dir
+
+
 def _read_jsonl(path: Path) -> list[dict]:
     records = []
     with path.open() as f:

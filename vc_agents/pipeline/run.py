@@ -274,7 +274,7 @@ def run_stage1(
     sector_instruction = ""
     if sector_focus:
         sector_instruction = (
-            f"\n\nSECTOR FOCUS: All 5 ideas must be in or closely related to the "
+            f"\n\nSECTOR FOCUS: All {ideas_per_provider} ideas must be in or closely related to the "
             f'"{sector_focus}" sector. Be creative within this constraint -- explore '
             f"different angles, business models, and customer segments within {sector_focus}.\n"
         )
@@ -356,6 +356,7 @@ def run_stage1(
             provider_name=provider.name,
             ideas_json=json.dumps(my_ideas, indent=2),
             feedback_json=json.dumps(feedback_by_idea, indent=2),
+            ideas_count=ideas_per_provider,
         )
         result = retry_json_call(
             provider, prompt, schema=SELECTION_SCHEMA,
