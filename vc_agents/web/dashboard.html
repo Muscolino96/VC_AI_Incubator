@@ -409,6 +409,20 @@ select option { background: #1a1b20; }
 .idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
 .idea-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; transition: border-color .2s, transform .18s; }
 .idea-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+/* ─────────────────────────── LIVE IDEA STATES ─────────────────────────── */
+.idea-card.idea-selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim); }
+.idea-card.idea-rejected { opacity: .38; filter: grayscale(.6); }
+.idea-score-bar {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.idea-score-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--ink-2); border: 1px solid var(--border);
+}
+.idea-score-chip .isc-prov { font-size: 9px; color: var(--text-xs); font-weight: 400; }
 .idea-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .idea-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
 .provider-badge {
@@ -1105,6 +1119,10 @@ function handleEvent(ev) {
     document.getElementById('btnRun').disabled = false;
     document.getElementById('runStatus').textContent = '';
   }
+  // Live Stage 1 handlers
+  if (ev.type === 'step_complete' && ev.stage === 'stage1' && ev.step === 'ideas') handleStage1Ideas(ev);
+  if (ev.type === 'step_complete' && ev.stage === 'stage1' && ev.step === 'feedback') handleStage1Feedback(ev);
+  if (ev.type === 'stage_complete' && ev.stage === 'stage1') handleStage1Selection(ev);
   appendEvent(ev);
 }
 
@@ -1467,6 +1485,88 @@ function renderTokenUsage(usage) {
   html += '</div>';
   div.innerHTML = html;
   portfolioEl.appendChild(div);
+}
+
+/* ══════════════════ LIVE STAGE 1 HANDLERS ══════════════════ */
+
+// Called on step_complete / stage=stage1 / step=ideas
+// ev.data.ideas = array of idea objects; ev.provider = founder name
+function handleStage1Ideas(ev) {
+  const ideas = (ev.data && ev.data.ideas) ? ev.data.ideas : [];
+  if (!ideas.length) return;
+  // Auto-switch to Ideas tab when first ideas arrive
+  const ideasPane = document.getElementById('pane-ideas');
+  if (!ideasPane.classList.contains('active')) switchTab('ideas');
+  const el = document.getElementById('ideasContent');
+  // Ensure the grid container exists
+  let grid = el.querySelector('.idea-grid');
+  if (!grid) {
+    el.innerHTML = '<div class="idea-grid"></div>';
+    grid = el.querySelector('.idea-grid');
+  }
+  const prov = (ev.provider || '').toLowerCase();
+  for (const idea of ideas) {
+    // Avoid duplicate cards if live view and loadResults both fire
+    if (grid.querySelector(`[data-idea-id="${CSS.escape(idea.idea_id || '')}"]`)) continue;
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.dataset.ideaId = idea.idea_id || '';
+    card.innerHTML = `
+      <div class="idea-top">
+        <div class="idea-title">${esc(idea.title)}</div>
+        <span class="provider-badge ${prov}">${esc(ev.provider)}</span>
+      </div>
+      <p class="idea-summary">${esc(idea.summary)}</p>
+      <div class="idea-details">
+        <div class="idea-drow"><span class="idea-dlabel">Target</span><span class="idea-dval">${esc(idea.target_customer)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Why now</span><span class="idea-dval">${esc(idea.why_now)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Market</span><span class="idea-dval">${esc(idea.market_size_estimate)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Moat</span><span class="idea-dval">${esc(idea.unfair_advantage)}</span></div>
+      </div>
+      <div class="idea-score-bar"></div>`;
+    grid.appendChild(card);
+  }
+}
+
+// Called on step_complete / stage=stage1 / step=feedback
+// ev.data.score = number; ev.data.idea_id = string; ev.provider = reviewer
+function handleStage1Feedback(ev) {
+  const ideaId = (ev.data && ev.data.idea_id) ? ev.data.idea_id : (ev.idea_id || '');
+  const score = ev.data && ev.data.score != null ? ev.data.score : null;
+  const reviewer = ev.provider || '';
+  if (!ideaId) return;
+  const card = document.querySelector(`[data-idea-id="${CSS.escape(ideaId)}"]`);
+  if (!card) return;
+  let bar = card.querySelector('.idea-score-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'idea-score-bar';
+    card.appendChild(bar);
+  }
+  const scoreColor = score >= 7 ? 'var(--green)' : score >= 5 ? 'var(--yellow)' : 'var(--red)';
+  const chip = document.createElement('span');
+  chip.className = 'idea-score-chip';
+  chip.style.borderColor = scoreColor;
+  chip.innerHTML = `<span style="color:${scoreColor}">${score != null ? score + '/10' : '?'}</span><span class="isc-prov">${esc(reviewer)}</span>`;
+  bar.appendChild(chip);
+}
+
+// Called on stage_complete / stage=stage1
+// ev.data.selections = { providerName: selectedIdeaId, ... }
+function handleStage1Selection(ev) {
+  const selections = (ev.data && ev.data.selections) ? ev.data.selections : {};
+  const selectedIds = new Set(Object.values(selections));
+  // All rendered idea cards
+  document.querySelectorAll('#ideasContent .idea-card[data-idea-id]').forEach(card => {
+    const id = card.dataset.ideaId;
+    if (selectedIds.has(id)) {
+      card.classList.add('idea-selected');
+      card.classList.remove('idea-rejected');
+    } else {
+      card.classList.add('idea-rejected');
+      card.classList.remove('idea-selected');
+    }
+  });
 }
 
 /* ══════════════════ INIT ══════════════════ */
