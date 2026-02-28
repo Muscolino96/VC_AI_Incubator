@@ -140,7 +140,10 @@ Plans:
   2. When `supports_native_json=True`, `retry_json_call` uses a lower max-retry count than the default
   3. Both OpenAI provider implementations (Responses API and compat chat) have the flag set to True and log a message confirming native JSON mode is active
   4. Non-OpenAI providers (Anthropic, DeepSeek, Gemini) retain the full default retry count and no log message appears
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — Add supports_native_json to ProviderConfig, update retry_json_call, flag both OpenAI providers, add TestNativeJsonMode tests (JSON-01, JSON-02, JSON-03, JSON-04)
 
 ### Phase 9: Live Cost Tracking
 **Goal**: Every API call's cost is calculated and accumulated in real time; operators can cap spend with `--budget` and get a final cost breakdown file
@@ -166,6 +169,6 @@ Plans:
 | 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
 | 5. New Dashboard | 2/2 | Complete | 2026-02-28 |
 | 6. Dynamic Provider Count | 2/2 | Complete | 2026-02-28 |
-| 7. Rich Real-time UX | 0/3 | Not started | - |
-| 8. Native JSON Mode | 0/TBD | Not started | - |
+| 7. Rich Real-time UX | 3/3 | Complete | 2026-02-28 |
+| 8. Native JSON Mode | 0/1 | Not started | - |
 | 9. Live Cost Tracking | 0/TBD | Not started | - |
