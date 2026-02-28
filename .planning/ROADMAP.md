@@ -107,7 +107,11 @@ Plans:
   2. A 6-provider run completes all three stages without errors or missing outputs
   3. Advisor review count equals `len(advisors)` (or `len(advisors) - 1` when an advisor is also a founder) in all configurations
   4. Tests cover 1-founder, 2-founder, and 6-provider configurations and all pass
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Add mock_providers param to run_pipeline; fix hardcoded count assertions in existing tests (DYN-01, DYN-02, DYN-03, DYN-04)
+- [ ] 06-02-PLAN.md — Add TestDynamicProviderCount: 2-founder, 6-provider, review count, role rotation tests (DYN-05)
 
 ### Phase 7: Rich Real-time UX
 **Goal**: The dashboard surfaces live progress at the individual idea, plan, and investor-decision level as each event arrives — not only after a stage finishes
@@ -156,7 +160,7 @@ Plans:
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
 | 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
 | 5. New Dashboard | 2/2 | Complete | 2026-02-28 |
-| 6. Dynamic Provider Count | 0/TBD | Not started | - |
+| 6. Dynamic Provider Count | 0/2 | Not started | - |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
 | 8. Native JSON Mode | 0/TBD | Not started | - |
 | 9. Live Cost Tracking | 0/TBD | Not started | - |
