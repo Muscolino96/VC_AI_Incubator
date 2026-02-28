@@ -37,6 +37,7 @@ class RunConfig(BaseModel):
     retry_max: int = 3
     deliberation_enabled: bool = False
     budget: float | None = None
+    skip_preflight: bool = False
     models: dict[str, str] = {}
     base_urls: dict[str, str] = {}
     api_keys: dict[str, str] = {}
@@ -142,6 +143,7 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             sector_focus=sector,
             deliberation_enabled=config.get("deliberation_enabled", False),
             budget=config.get("budget"),
+            skip_preflight=config.get("skip_preflight", False),
             emit=emit,
             provider_config=config,
             slot3_base_url=slot3_base_url,

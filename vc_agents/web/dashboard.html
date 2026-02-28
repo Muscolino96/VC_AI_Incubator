@@ -622,6 +622,8 @@ details[open] .plan-chevron { transform: rotate(90deg); background: var(--gold-d
         <div class="field">
           <label>Ideas per model</label>
           <select id="cfgIdeas">
+            <option value="1">1 — single idea</option>
+            <option value="2">2</option>
             <option value="3">3</option><option value="5" selected>5</option>
             <option value="7">7</option><option value="10">10</option>
           </select>
@@ -644,6 +646,47 @@ details[open] .plan-chevron { transform: rotate(90deg); background: var(--gold-d
           <option value="true">Mock — no API calls (testing)</option>
           <option value="false">Live — real API calls</option>
         </select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Concurrency</label>
+          <select id="cfgConcurrency">
+            <option value="1" selected>1 — sequential</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Max retries</label>
+          <select id="cfgRetryMax">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Deliberation mode</label>
+          <select id="cfgDeliberation">
+            <option value="false" selected>Off</option>
+            <option value="true">On — advisor synthesis</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Skip pre-flight</label>
+          <select id="cfgSkipPreflight">
+            <option value="false" selected>No — validate providers</option>
+            <option value="true">Yes — skip validation</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Budget cap (USD)</label>
+        <input type="number" id="cfgBudget" placeholder="e.g. 2.50 — leave blank for no limit" min="0" step="0.01">
+        <div class="field-hint">Pipeline stops gracefully when cost exceeds this</div>
       </div>
     </div>
 
@@ -1217,8 +1260,11 @@ async function startRun() {
     max_iterations: parseInt(document.getElementById('cfgIter').value),
     ideas_per_provider: parseInt(document.getElementById('cfgIdeas').value),
     sector_focus: document.getElementById('cfgSector').value.trim(),
-    concurrency: 1, retry_max: 3,
-    deliberation_enabled: false,
+    concurrency: parseInt(document.getElementById('cfgConcurrency').value),
+    retry_max: parseInt(document.getElementById('cfgRetryMax').value),
+    deliberation_enabled: document.getElementById('cfgDeliberation').value === 'true',
+    skip_preflight: document.getElementById('cfgSkipPreflight').value === 'true',
+    budget: parseFloat(document.getElementById('cfgBudget').value) || null,
     models: {
       openai:   state.models[0],
       anthropic: state.models[1],
