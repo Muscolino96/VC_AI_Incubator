@@ -106,21 +106,57 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARA-01 through PARA-06 | Phase 1 | Pending |
-| PRE-01 through PRE-05 | Phase 2 | Pending |
-| RES-01 through RES-04 | Phase 3 | Pending |
-| IDEA-01 through IDEA-04 | Phase 4 | Pending |
-| DASH-01 through DASH-05 | Phase 5 | Pending |
-| DYN-01 through DYN-05 | Phase 6 | Pending |
-| UX-01 through UX-07 | Phase 7 | Pending |
-| JSON-01 through JSON-04 | Phase 8 | Pending |
-| COST-01 through COST-05 | Phase 9 | Pending |
+| PARA-01 | Phase 1 | Pending |
+| PARA-02 | Phase 1 | Pending |
+| PARA-03 | Phase 1 | Pending |
+| PARA-04 | Phase 1 | Pending |
+| PARA-05 | Phase 1 | Pending |
+| PARA-06 | Phase 1 | Pending |
+| PRE-01 | Phase 2 | Pending |
+| PRE-02 | Phase 2 | Pending |
+| PRE-03 | Phase 2 | Pending |
+| PRE-04 | Phase 2 | Pending |
+| PRE-05 | Phase 2 | Pending |
+| RES-01 | Phase 3 | Pending |
+| RES-02 | Phase 3 | Pending |
+| RES-03 | Phase 3 | Pending |
+| RES-04 | Phase 3 | Pending |
+| IDEA-01 | Phase 4 | Pending |
+| IDEA-02 | Phase 4 | Pending |
+| IDEA-03 | Phase 4 | Pending |
+| IDEA-04 | Phase 4 | Pending |
+| DASH-01 | Phase 5 | Pending |
+| DASH-02 | Phase 5 | Pending |
+| DASH-03 | Phase 5 | Pending |
+| DASH-04 | Phase 5 | Pending |
+| DASH-05 | Phase 5 | Pending |
+| DYN-01 | Phase 6 | Pending |
+| DYN-02 | Phase 6 | Pending |
+| DYN-03 | Phase 6 | Pending |
+| DYN-04 | Phase 6 | Pending |
+| DYN-05 | Phase 6 | Pending |
+| UX-01 | Phase 7 | Pending |
+| UX-02 | Phase 7 | Pending |
+| UX-03 | Phase 7 | Pending |
+| UX-04 | Phase 7 | Pending |
+| UX-05 | Phase 7 | Pending |
+| UX-06 | Phase 7 | Pending |
+| UX-07 | Phase 7 | Pending |
+| JSON-01 | Phase 8 | Pending |
+| JSON-02 | Phase 8 | Pending |
+| JSON-03 | Phase 8 | Pending |
+| JSON-04 | Phase 8 | Pending |
+| COST-01 | Phase 9 | Pending |
+| COST-02 | Phase 9 | Pending |
+| COST-03 | Phase 9 | Pending |
+| COST-04 | Phase 9 | Pending |
+| COST-05 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 43 total
 - Mapped to phases: 43
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation — traceability expanded to individual rows*
