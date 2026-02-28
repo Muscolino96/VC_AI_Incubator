@@ -661,7 +661,10 @@ def run_stage3(
     all_decisions: list[dict[str, Any]] = []
 
     for founder in founders_list:
-        plan = final_plans[founder.name]
+        plan = next((p for p in final_plans.values() if p["founder_provider"] == founder.name), None)
+        if plan is None:
+            logger.warning("No plan found for founder %s, skipping", founder.name)
+            continue
         idea_id = plan["idea_id"]
         logger.info("  %s preparing pitch for %s", founder.name, idea_id)
 
@@ -828,7 +831,7 @@ def run_pipeline(
         if checkpoint and checkpoint.get("stage2_complete"):
             logger.info("Resuming: loading Stage 2 plans from checkpoint")
             plans_list = _load_jsonl(run_dir / "stage2_final_plans.jsonl")
-            final_plans = {p["founder_provider"]: p for p in plans_list}
+            final_plans = {p["idea_id"]: p for p in plans_list}
         else:
             final_plans = run_stage2(
                 providers, selections, retry_max, concurrency, max_iterations, run_dir,
