@@ -49,7 +49,10 @@ Plans:
   3. All four provider checks run in parallel and the pre-flight step finishes in under 10 seconds on a passing run
   4. When a provider fails, the error output names the provider and the specific failure reason (bad key, wrong model ID, unreachable URL)
   5. `--skip-preflight` bypasses the check entirely without errors
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 02-01-PLAN.md — Implement run_preflight() and wire into run_pipeline(); add --skip-preflight flag; write TestPreflight tests (PRE-01, PRE-02, PRE-03, PRE-04, PRE-05)
 
 ### Phase 3: Resume Fix
 **Goal**: A pipeline crash mid-Stage 2 resumes from the last completed founder rather than restarting all of Stage 2
@@ -139,7 +142,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Parallelization | 3/3 | Complete | 2026-02-28 |
-| 2. Pre-flight Validation | 0/TBD | Not started | - |
+| 2. Pre-flight Validation | 0/1 | Not started | - |
 | 3. Resume Fix | 0/TBD | Not started | - |
 | 4. Flexible Idea Count | 0/TBD | Not started | - |
 | 5. New Dashboard | 0/TBD | Not started | - |
