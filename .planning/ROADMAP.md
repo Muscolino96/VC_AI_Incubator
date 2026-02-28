@@ -77,7 +77,10 @@ Plans:
   2. `--ideas-per-provider 2` triggers a selection prompt that says "choose between 2 ideas" rather than the default wording
   3. The Stage 1 feedback step runs even when count is 1
   4. Any integer value of 1 or higher completes without prompt errors or broken JSON schemas
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md — Adapt select_prompt.txt for count-awareness, add count=1 bypass in run_stage1(), add TestFlexibleIdeas tests (IDEA-01, IDEA-02, IDEA-03, IDEA-04)
 
 ### Phase 5: New Dashboard
 **Goal**: The new dashboard.html is in place and all existing run management features work alongside the new feedback, token, and deliberation views
@@ -147,7 +150,7 @@ Plans:
 | 1. Parallelization | 3/3 | Complete | 2026-02-28 |
 | 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
-| 4. Flexible Idea Count | 0/TBD | Not started | - |
+| 4. Flexible Idea Count | 0/1 | Not started | - |
 | 5. New Dashboard | 0/TBD | Not started | - |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
