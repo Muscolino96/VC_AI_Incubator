@@ -23,10 +23,10 @@
 
 ### Dashboard — Global Design Refresh
 
-- [ ] **STYLE-01**: DM Serif Display, JetBrains Mono, and DM Sans fonts loaded from Google Fonts and applied globally
-- [ ] **STYLE-02**: Gold palette CSS tokens (`--gold`, `--gold-dim`, `--gold-glow`) and provider colour tokens (`--c-openai`, `--c-anthropic`, `--c-compat`, `--c-mistral`, etc.) added to `:root`
-- [ ] **STYLE-03**: Provider badges in the event log and results use `data-prov` attribute + CSS attribute selectors for colour; fallback to `--c-compat` for unknown providers
-- [ ] **STYLE-04**: Existing layout structure (header, config panel, progress section, results tabs) preserved — no layout rewrite
+- [x] **STYLE-01**: DM Serif Display, JetBrains Mono, and DM Sans fonts loaded from Google Fonts and applied globally
+- [x] **STYLE-02**: Gold palette CSS tokens (`--gold`, `--gold-dim`, `--gold-glow`) and provider colour tokens (`--c-openai`, `--c-anthropic`, `--c-compat`, `--c-mistral`, etc.) added to `:root`
+- [x] **STYLE-03**: Provider badges in the event log and results use `data-prov` attribute + CSS attribute selectors for colour; fallback to `--c-compat` for unknown providers
+- [x] **STYLE-04**: Existing layout structure (header, config panel, progress section, results tabs) preserved — no layout rewrite
 
 ## v2 Requirements
 
@@ -60,10 +60,10 @@
 | UI-04 | Phase 2 | Pending |
 | UI-05 | Phase 2 | Pending |
 | UI-06 | Phase 2 | Pending |
-| STYLE-01 | Phase 2 | Pending |
-| STYLE-02 | Phase 2 | Pending |
-| STYLE-03 | Phase 2 | Pending |
-| STYLE-04 | Phase 2 | Pending |
+| STYLE-01 | Phase 2 | Complete |
+| STYLE-02 | Phase 2 | Complete |
+| STYLE-03 | Phase 2 | Complete |
+| STYLE-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 14 total
