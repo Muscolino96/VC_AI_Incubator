@@ -14,7 +14,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins (2026-02-28)
 - [x] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders (2026-02-28)
 - [x] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts (2026-02-28)
-- [ ] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs
+- [x] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs (2026-02-28)
 - [ ] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors
 - [ ] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators
 - [ ] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers
@@ -95,8 +95,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Deploy docs/dashboard.html to vc_agents/web/dashboard.html; patch get_results() to serve token_usage.json (DASH-01, DASH-02)
-- [ ] 05-02-PLAN.md — Add renderFeedback(), renderTokenUsage(), and deliberation rendering in renderPlans() (DASH-03, DASH-04, DASH-05)
+- [x] 05-01-PLAN.md — Deploy docs/dashboard.html to vc_agents/web/dashboard.html; patch get_results() to serve token_usage.json (DASH-01, DASH-02)
+- [x] 05-02-PLAN.md — Add renderFeedback(), renderTokenUsage(), and deliberation rendering in renderPlans() (DASH-03, DASH-04, DASH-05)
 
 ### Phase 6: Dynamic Provider Count
 **Goal**: The pipeline runs correctly regardless of whether there are 2, 4, or 6 providers; role rotation and review counts adapt automatically
@@ -155,7 +155,7 @@ Plans:
 | 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
 | 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
-| 5. New Dashboard | 0/2 | Not started | - |
+| 5. New Dashboard | 2/2 | Complete | 2026-02-28 |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
 | 8. Native JSON Mode | 0/TBD | Not started | - |

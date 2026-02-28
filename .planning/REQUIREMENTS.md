@@ -40,11 +40,11 @@ Requirements for the overhaul milestone. Each maps to exactly one phase. Source:
 
 ### Dashboard
 
-- [ ] **DASH-01**: New dashboard.html replaces old one and all existing run management functionality works (start, view, WebSocket events)
-- [ ] **DASH-02**: `base_urls` from dashboard config payload is forwarded through server.py to provider constructors
-- [ ] **DASH-03**: Ideas tab includes a Feedback sub-section showing Stage 1 reviewer scores and comments
-- [ ] **DASH-04**: Run results view shows per-provider token usage summary (input/output/total + estimated cost)
-- [ ] **DASH-05**: Plans tab shows deliberation summaries (consensus issues, disagreements, priority actions) under each founder's plan when deliberation data exists
+- [x] **DASH-01**: New dashboard.html replaces old one and all existing run management functionality works (start, view, WebSocket events)
+- [x] **DASH-02**: `base_urls` from dashboard config payload is forwarded through server.py to provider constructors
+- [x] **DASH-03**: Ideas tab includes a Feedback sub-section showing Stage 1 reviewer scores and comments
+- [x] **DASH-04**: Run results view shows per-provider token usage summary (input/output/total + estimated cost)
+- [x] **DASH-05**: Plans tab shows deliberation summaries (consensus issues, disagreements, priority actions) under each founder's plan when deliberation data exists
 
 ### Dynamic
 
