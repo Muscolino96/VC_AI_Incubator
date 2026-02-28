@@ -731,30 +731,40 @@ def run_stage3(
         )
         all_pitches.append(pitch)
 
-        # Investors evaluate — all role-assigned investors except the founder
+        # Investors evaluate — all role-assigned investors except the founder (parallel)
         investors = [p for p in investors_pool if p.name != founder.name]
-        for investor in investors:
+
+        def investor_eval_task(task: dict[str, Any]) -> dict[str, Any]:
+            investor = task["investor"]
             prompt = investor_prompt_tmpl.format(
                 provider_name=investor.name,
-                pitch_json=json.dumps(pitch, indent=2),
-                plan_json=json.dumps(plan, indent=2),
+                pitch_json=json.dumps(task["pitch"], indent=2),
+                plan_json=json.dumps(task["plan"], indent=2),
             )
             decision = retry_json_call(
                 investor, prompt, schema=INVESTOR_DECISION_SCHEMA,
-                context=f"invest ({investor.name}/{idea_id})", max_retries=retry_max,
+                context=f"invest ({investor.name}/{task['idea_id']})",
+                max_retries=retry_max,
                 system=investor_system,
             )
-            all_decisions.append(decision)
             logger.info(
                 "    %s -> %s (conviction: %s)",
                 investor.name, decision["decision"], decision["conviction_score"],
             )
             emit(PipelineEvent(
                 type=EventType.STEP_COMPLETE, stage="stage3", step="investor_decision",
-                provider=investor.name, idea_id=idea_id,
+                provider=investor.name, idea_id=task["idea_id"],
                 message=f"{investor.name}: {decision['decision']} (conviction {decision['conviction_score']})",
                 data={"decision": decision["decision"], "conviction": decision["conviction_score"]},
             ))
+            return decision
+
+        investor_tasks = [
+            {"investor": investor, "pitch": pitch, "plan": plan, "idea_id": idea_id}
+            for investor in investors
+        ]
+        decisions = list(_map_concurrently(investor_eval_task, investor_tasks, concurrency))
+        all_decisions.extend(decisions)
 
     _write_jsonl(run_dir / "stage3_pitches.jsonl", all_pitches)
     _write_jsonl(run_dir / "stage3_decisions.jsonl", all_decisions)
