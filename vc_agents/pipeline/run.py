@@ -1101,6 +1101,9 @@ def run_pipeline(
                     founders_override=remaining,
                 )
                 final_plans.update(partial)
+                # Rewrite stage2_final_plans.jsonl with the complete merged set so
+                # a subsequent resume (e.g. Stage 3 crash) can load all founders.
+                _write_jsonl(run_dir / "stage2_final_plans.jsonl", list(final_plans.values()))
             else:
                 logger.info("Resuming: all founders already done, skipping Stage 2")
                 emit(PipelineEvent(

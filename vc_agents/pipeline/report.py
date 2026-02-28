@@ -23,7 +23,9 @@ def build_portfolio_report(
     """
     rows: list[dict[str, Any]] = []
     for provider in providers:
-        plan = plans[provider.name]
+        plan = plans.get(provider.name)
+        if plan is None:
+            continue  # founder was skipped (e.g. crashed before Stage 2 completed)
         idea_id = plan["idea_id"]
         pitch = next((p for p in pitches if p["idea_id"] == idea_id), None)
 
