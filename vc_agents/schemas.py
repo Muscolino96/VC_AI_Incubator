@@ -315,10 +315,25 @@ INVESTOR_DECISION_SCHEMA = {
             "properties": {
                 "check_size": {"type": "string"},
                 "valuation_range": {"type": "string"},
-                "key_conditions": {"type": "string"},
+                "key_conditions": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {"type": "array", "items": {"type": "string"}},
+                    ]
+                },
             },
         },
-        "pass_reasons": {"type": "string"},
-        "would_change_mind": {"type": "string"},
+        "pass_reasons": {
+            "oneOf": [
+                {"type": "string"},
+                {"type": "array", "items": {"type": "string"}},
+            ]
+        },
+        "would_change_mind": {
+            "oneOf": [
+                {"type": "string"},
+                {"type": "array", "items": {"type": "string"}},
+            ]
+        },
     },
 }

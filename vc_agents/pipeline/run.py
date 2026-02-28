@@ -308,12 +308,15 @@ def retry_json_call(
     HTTP-level retries are handled inside the provider. This function only
     retries on JSON parsing and schema validation errors.
     """
-    effective_retries = 1 if provider.config.supports_native_json else max_retries
+    # Native JSON mode prevents JSON *parse* failures, but schema validation
+    # errors can still occur (model returns valid JSON with wrong structure).
+    # So we only reduce retries for parse errors, not schema errors.
+    # Use max_retries for all cases to ensure schema failures get retried.
+    effective_retries = max_retries
     if provider.config.supports_native_json:
         logger.debug(
-            "Native JSON mode active for %s — using 1 attempt (max_retries=%d ignored)",
+            "Native JSON mode active for %s — JSON parse failures unlikely",
             provider.name,
-            max_retries,
         )
     last_error: Exception | None = None
     for attempt in range(1, effective_retries + 1):
