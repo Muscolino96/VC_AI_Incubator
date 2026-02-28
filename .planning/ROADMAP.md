@@ -12,7 +12,7 @@ Two phases deliver the milestone: first the backend is made reliable and wire-co
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Backend Fixes** - Fix all 4 backend bugs so the pipeline runs end-to-end with correct checkpoint resume and configurable base URLs
+- [x] **Phase 1: Backend Fixes** - Fix all 4 backend bugs so the pipeline runs end-to-end with correct checkpoint resume and configurable base URLs (completed 2026-02-28)
 - [ ] **Phase 2: Dashboard Overhaul** - Rebuild the team builder as a 4-slot strip and apply the new design tokens globally to dashboard.html
 
 ## Phase Details
@@ -51,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Backend Fixes | 1/2 | In progress | - |
+| 1. Backend Fixes | 2/2 | Complete   | 2026-02-28 |
 | 2. Dashboard Overhaul | 0/TBD | Not started | - |
