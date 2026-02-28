@@ -92,7 +92,11 @@ Plans:
   3. The Ideas tab shows a Feedback sub-section with Stage 1 reviewer scores and comments for each idea
   4. The run results view displays per-provider token usage (input / output / total + estimated cost)
   5. The Plans tab renders deliberation summaries (consensus issues, disagreements, priority actions) under each founder's plan when that data is present
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Deploy docs/dashboard.html to vc_agents/web/dashboard.html; patch get_results() to serve token_usage.json (DASH-01, DASH-02)
+- [ ] 05-02-PLAN.md — Add renderFeedback(), renderTokenUsage(), and deliberation rendering in renderPlans() (DASH-03, DASH-04, DASH-05)
 
 ### Phase 6: Dynamic Provider Count
 **Goal**: The pipeline runs correctly regardless of whether there are 2, 4, or 6 providers; role rotation and review counts adapt automatically
@@ -151,7 +155,7 @@ Plans:
 | 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
 | 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
-| 5. New Dashboard | 0/TBD | Not started | - |
+| 5. New Dashboard | 0/2 | Not started | - |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
 | 8. Native JSON Mode | 0/TBD | Not started | - |
