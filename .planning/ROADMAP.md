@@ -13,7 +13,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time (2026-02-28)
 - [x] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins (2026-02-28)
 - [x] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders (2026-02-28)
-- [ ] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts
+- [x] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts (2026-02-28)
 - [ ] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs
 - [ ] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors
 - [ ] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators
@@ -80,7 +80,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md — Adapt select_prompt.txt for count-awareness, add count=1 bypass in run_stage1(), add TestFlexibleIdeas tests (IDEA-01, IDEA-02, IDEA-03, IDEA-04)
+- [x] 04-01-PLAN.md — Adapt select_prompt.txt for count-awareness, add count=1 bypass in run_stage1(), add TestFlexibleIdeas tests (IDEA-01, IDEA-02, IDEA-03, IDEA-04)
 
 ### Phase 5: New Dashboard
 **Goal**: The new dashboard.html is in place and all existing run management features work alongside the new feedback, token, and deliberation views
@@ -150,7 +150,7 @@ Plans:
 | 1. Parallelization | 3/3 | Complete | 2026-02-28 |
 | 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
-| 4. Flexible Idea Count | 0/1 | Not started | - |
+| 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
 | 5. New Dashboard | 0/TBD | Not started | - |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
