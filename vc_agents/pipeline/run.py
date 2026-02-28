@@ -86,7 +86,7 @@ def run_preflight(providers: list[BaseProvider], concurrency: int) -> None:
         if isinstance(provider, MockProvider):
             return PreflightResult(provider.name, True, "mock — skipped")
         try:
-            provider.generate("Reply with exactly: ok", system="")
+            provider.generate('Reply with this exact JSON: {"status": "ok"}', system="")
             return PreflightResult(provider.name, True, f"OK (model={provider.model})")
         except Exception as exc:
             return PreflightResult(provider.name, False, str(exc)[:300])
