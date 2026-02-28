@@ -12,7 +12,7 @@ Two phases deliver the milestone: first the backend is made reliable and wire-co
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Backend Fixes** - Fix all 4 backend bugs so the pipeline runs end-to-end with correct checkpoint resume and configurable base URLs (completed 2026-02-28)
+- [x] **Phase 1: Backend Fixes** - Fix all 4 backend bugs so the pipeline runs end-to-end with correct checkpoint resume and configurable base URLs (completed 2026-02-28)
 - [ ] **Phase 2: Dashboard Overhaul** - Rebuild the team builder as a 4-slot strip and apply the new design tokens globally to dashboard.html
 
 ## Phase Details
@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Fix _load_jsonl import (BUG-01) and rekey checkpoint dicts by idea_id (BUG-02)
-- [ ] 01-02-PLAN.md — Add RunConfig Pydantic model (BUG-03) and wire slot base URLs through server + pipeline (BUG-04)
+- [x] 01-02-PLAN.md — Add RunConfig Pydantic model (BUG-03) and wire slot base URLs through server + pipeline (BUG-04)
 
 ### Phase 2: Dashboard Overhaul
 **Goal**: The dashboard displays a 4-slot team builder with provider tabs and editable base URL fields, sends the correct wire payload on launch, and is visually refreshed with the new design tokens
@@ -42,7 +42,11 @@ Plans:
   3. Clicking "Launch Run" sends a JSON body containing `models` and `base_urls` dicts that match the `RunConfig` schema; the payload is visible in browser DevTools network tab
   4. Provider badges in the event log display the correct colour for each provider via `data-prov` attribute; an unknown provider falls back to the compat colour
   5. The page uses DM Serif Display, JetBrains Mono, and DM Sans fonts; the gold palette and provider colour tokens are present in the `:root` CSS; the existing header, config panel, progress section, and results tabs layout is unchanged
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Design tokens, Google Fonts, provider badge data-prov system (STYLE-01 through STYLE-04)
+- [ ] 02-02-PLAN.md — 4-slot team builder HTML/CSS/JS and updated startRun() wire payload (UI-01 through UI-06)
 
 ## Progress
 
@@ -52,4 +56,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Backend Fixes | 2/2 | Complete    | 2026-02-28 |
-| 2. Dashboard Overhaul | 0/TBD | Not started | - |
+| 2. Dashboard Overhaul | 0/2 | Not started | - |
