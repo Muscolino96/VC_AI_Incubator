@@ -491,6 +491,13 @@ def run_stage1(
             max_retries=retry_max,
             system=feedback_system,
         )
+        emit(PipelineEvent(
+            type=EventType.STEP_COMPLETE, stage="stage1", step="feedback",
+            provider=result.get("reviewer_provider", reviewer.name),
+            idea_id=result.get("idea_id", idea.get("idea_id", "")),
+            message=f"{reviewer.name} reviewed idea {idea.get('idea_id','')}: score={result.get('score')}",
+            data={"score": result.get("score"), "idea_id": result.get("idea_id", idea.get("idea_id", ""))},
+        ))
         return result
 
     tasks = []
@@ -631,6 +638,12 @@ def run_stage2(
             system=build_system,
         )
         _write_jsonl(run_dir / f"stage2_{founder.name}_plan_v0.jsonl", [plan])
+        emit(PipelineEvent(
+            type=EventType.STEP_COMPLETE, stage="stage2", step="plan_version",
+            provider=founder.name, idea_id=idea_id,
+            message=f"{founder.name} built initial plan v0",
+            data={"version": 0, "idea_id": idea_id},
+        ))
 
         # --- Iteration rounds ---
         for round_num in range(1, max_iterations + 1):
@@ -767,6 +780,12 @@ def run_stage2(
                 run_dir / f"stage2_{founder.name}_plan_v{round_num}.jsonl",
                 [plan],
             )
+            emit(PipelineEvent(
+                type=EventType.STEP_COMPLETE, stage="stage2", step="plan_version",
+                provider=founder.name, idea_id=idea_id,
+                message=f"{founder.name} iterated plan to v{round_num}",
+                data={"version": round_num, "idea_id": idea_id},
+            ))
 
         return founder.name, plan, founder_reviews
 
