@@ -102,6 +102,18 @@ class TestPipelineMock:
         assert len(decisions) == 12
 
 
+    def test_concurrent_stage1_fires_all_selections(self, tmp_path, monkeypatch):
+        """With concurrency=4, all 4 founders' selections are present in output."""
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True, concurrency=4, retry_max=1,
+            max_iterations=1, ideas_per_provider=2,
+        )
+        selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
+        assert len(selections) == 4
+        founder_names = {s["founder_provider"] for s in selections}
+        assert founder_names == {"openai", "anthropic", "deepseek", "gemini"}
+
     def test_resume_skips_completed_stages(self, tmp_path, monkeypatch):
         """Run pipeline then resume — should skip all stages and return same dir."""
         monkeypatch.chdir(tmp_path)
