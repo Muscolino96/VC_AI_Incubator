@@ -63,7 +63,10 @@ Plans:
   2. Running `--resume` with two founders already in that list makes zero API calls for those two founders
   3. The resumed run loads each done founder's plan from the highest-versioned plan file on disk and the data structure is identical to a freshly generated plan
   4. `pytest tests/ -v` passes, including a test that simulates a mid-Stage-2 crash and verifies correct resume behavior
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md — Add per-founder checkpoint write, resume read path, and TestResume tests (RES-01, RES-02, RES-03, RES-04)
 
 ### Phase 4: Flexible Idea Count
 **Goal**: Operators can run with 1 or 2 ideas per provider; prompts adapt correctly and no stage breaks
@@ -142,8 +145,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Parallelization | 3/3 | Complete | 2026-02-28 |
-| 2. Pre-flight Validation | 0/1 | Not started | - |
-| 3. Resume Fix | 0/TBD | Not started | - |
+| 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
+| 3. Resume Fix | 0/1 | Not started | - |
 | 4. Flexible Idea Count | 0/TBD | Not started | - |
 | 5. New Dashboard | 0/TBD | Not started | - |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
