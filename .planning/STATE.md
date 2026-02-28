@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-28T22:30:00.000Z"
+last_updated: "2026-02-28T23:15:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 10
-  completed_plans: 10
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 13
+  completed_plans: 13
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** The pipeline must complete a full run reliably and produce a ranked portfolio report that reflects genuine multi-model deliberation.
-**Current focus:** Phase 7 — Rich Real-time UX
+**Current focus:** Phase 8 — Native JSON Mode
 
 ## Current Position
 
-Phase: 7 of 9 (Rich Real-time UX)
+Phase: 8 of 9 (Native JSON Mode)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-02-28 — Phase 6 Dynamic Provider Count complete (2/2 plans, 75/75 tests)
+Last activity: 2026-02-28 — Phase 7 Rich Real-time UX complete (3/3 plans, 75/75 tests)
 
-Progress: [██████░░░░] 67%
+Progress: [███████░░░] 78%
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [██████░░░░] 67%
 | 4 - Flexible Idea Count | 1 | 15 min | 15 min |
 | 5 - New Dashboard | 2 | 30 min | 15 min |
 | 6 - Dynamic Provider Count | 2 | 25 min | 13 min |
+| 7 - Rich Real-time UX | 3 | ~30 min | ~10 min |
 
 **Recent Trend:**
 - Last 5 plans: 03-01 (20m), 04-01 (15m), 05-01 (15m), 05-02 (15m), 06-01+06-02 (25m total)
@@ -79,6 +80,10 @@ Recent decisions affecting current work:
 - Phase 6: mock_providers param placed after skip_preflight, before slot3_base_url to avoid positional arg breakage
 - Phase 6: advisor self-exclusion already correct in production code (line 641); no structural changes needed
 - Phase 6: role rotation already uses % len(ADVISOR_ROLES) — correct for any N advisors
+- Phase 7: feedback_task emit uses closure emit (no parameter change); _run_founder_stage2 emit likewise
+- Phase 7: deduplication in handleStage1Ideas via CSS.escape(data-idea-id) prevents double-render on loadResults
+- Phase 7: live plan/pitch cards are stubs — loadResults() re-renders from full data on pipeline_complete, overwriting stubs
+- Phase 7: markStepDone no-ops if no matching _liveSteps key (handles step_complete before any step_start)
 
 ### Pending Todos
 
@@ -91,5 +96,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 complete — 2/2 plans executed, 75/75 tests pass, ROADMAP updated
+Stopped at: Phase 7 complete — 3/3 plans executed, 75/75 tests pass, ROADMAP updated
 Resume file: None

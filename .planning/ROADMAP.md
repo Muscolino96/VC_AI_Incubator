@@ -16,7 +16,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts (2026-02-28)
 - [x] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs (2026-02-28)
 - [x] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors (2026-02-28)
-- [ ] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators
+- [x] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators (2026-02-28)
 - [ ] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers
 - [ ] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json`
 
@@ -127,9 +127,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Add per-feedback and per-plan-build STEP_COMPLETE events to run.py (UX-02, UX-05)
-- [ ] 07-02-PLAN.md — Stage 1 live rendering: idea cards, score badges, selection highlight (UX-01, UX-02, UX-03)
-- [ ] 07-03-PLAN.md — Stage 2/3 live rendering + step state indicators (UX-04, UX-05, UX-06, UX-07)
+- [x] 07-01-PLAN.md — Add per-feedback and per-plan-build STEP_COMPLETE events to run.py (UX-02, UX-05)
+- [x] 07-02-PLAN.md — Stage 1 live rendering: idea cards, score badges, selection highlight (UX-01, UX-02, UX-03)
+- [x] 07-03-PLAN.md — Stage 2/3 live rendering + step state indicators (UX-04, UX-05, UX-06, UX-07)
 
 ### Phase 8: Native JSON Mode
 **Goal**: OpenAI-based providers signal that they return well-formed JSON natively, allowing the retry layer to use a reduced retry count
