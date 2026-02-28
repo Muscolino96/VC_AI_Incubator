@@ -423,6 +423,43 @@ select option { background: #1a1b20; }
   background: var(--ink-2); border: 1px solid var(--border);
 }
 .idea-score-chip .isc-prov { font-size: 9px; color: var(--text-xs); font-weight: 400; }
+/* ─────────────────────────── LIVE PLAN STATES ─────────────────────────── */
+.plan-version-badge {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,168,83,.3);
+  margin-left: 8px;
+}
+.live-review-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; font-size: 12px;
+  background: var(--ink-2); border-radius: 6px; margin-bottom: 4px;
+}
+.live-review-score {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; margin-left: auto;
+}
+.live-review-ready { font-size: 10px; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+.live-review-ready.yes { background: rgba(34,197,94,.1); color: var(--green); }
+.live-review-ready.no { background: rgba(234,179,8,.1); color: var(--yellow); }
+
+/* ─────────────────────────── STEP STATE INDICATOR ─────────────────────────── */
+.live-step-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 0; font-family: var(--font-mono); font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,.025);
+}
+.live-step-row:last-child { border-bottom: none; }
+.step-state {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+}
+.step-state.spinning {
+  border: 2px solid rgba(255,255,255,.1); border-top-color: var(--gold);
+  animation: spin .8s linear infinite;
+}
+.step-state.done { background: var(--green); color: var(--ink); font-size: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .idea-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .idea-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
 .provider-badge {
@@ -1123,6 +1160,14 @@ function handleEvent(ev) {
   if (ev.type === 'step_complete' && ev.stage === 'stage1' && ev.step === 'ideas') handleStage1Ideas(ev);
   if (ev.type === 'step_complete' && ev.stage === 'stage1' && ev.step === 'feedback') handleStage1Feedback(ev);
   if (ev.type === 'stage_complete' && ev.stage === 'stage1') handleStage1Selection(ev);
+  // Live Stage 2 handlers
+  if (ev.type === 'step_complete' && ev.stage === 'stage2' && ev.step === 'plan_version') handleStage2PlanVersion(ev);
+  if (ev.type === 'step_complete' && ev.stage === 'stage2' && (ev.step||'').startsWith('review_round')) handleStage2ReviewRound(ev);
+  // Live Stage 3 handler
+  if (ev.type === 'step_complete' && ev.stage === 'stage3' && ev.step === 'investor_decision') handleStage3Decision(ev);
+  // Step state indicators
+  if (ev.type === 'step_start') markStepStart(ev);
+  if (ev.type === 'step_complete') markStepDone(ev);
   appendEvent(ev);
 }
 
@@ -1567,6 +1612,181 @@ function handleStage1Selection(ev) {
       card.classList.remove('idea-selected');
     }
   });
+}
+
+/* ══════════════════ LIVE STAGE 2 HANDLERS ══════════════════ */
+
+// Called on step_complete / stage=stage2 / step=plan_version
+// ev.provider = founder name; ev.data.version = 0,1,2...
+function handleStage2PlanVersion(ev) {
+  const founder = ev.provider || '';
+  const version = ev.data ? ev.data.version : 0;
+  const ideaId = (ev.data && ev.data.idea_id) ? ev.data.idea_id : (ev.idea_id || '');
+  if (!founder) return;
+  // Auto-switch to Plans tab on first plan build event
+  const plansPane = document.getElementById('pane-plans');
+  if (!plansPane.classList.contains('active')) switchTab('plans');
+  const el = document.getElementById('plansContent');
+  // Ensure accordion container exists
+  let accordion = el.querySelector('.plan-accordion');
+  if (!accordion) {
+    el.innerHTML = '<div class="plan-accordion"></div>';
+    accordion = el.querySelector('.plan-accordion');
+  }
+  const planId = `live-plan-${CSS.escape(founder)}`;
+  let item = document.getElementById(planId);
+  const prov = founder.toLowerCase();
+  if (!item) {
+    // Create stub plan card
+    item = document.createElement('details');
+    item.className = 'plan-item';
+    item.id = planId;
+    item.innerHTML = `
+      <summary>
+        <div class="plan-chevron"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="plan-summary-text">
+          <strong>
+            <span class="provider-badge ${prov}" style="margin-right:8px">${esc(founder)}</span>
+            <span class="live-plan-idea-id">${esc(ideaId)}</span>
+          </strong>
+          <span class="live-plan-sub">Building initial plan…</span>
+        </div>
+        <span class="plan-version-badge" id="${planId}-ver">v0</span>
+      </summary>
+      <div class="plan-body" style="grid-template-columns:1fr">
+        <div class="plan-sec full">
+          <h4>Advisor Reviews</h4>
+          <div class="live-reviews-list" id="${planId}-reviews"></div>
+        </div>
+      </div>`;
+    accordion.appendChild(item);
+    item.open = true; // open by default while live
+  }
+  // Update version badge
+  const verBadge = document.getElementById(`${planId}-ver`);
+  if (verBadge) verBadge.textContent = `v${version}`;
+  const sub = item.querySelector('.live-plan-sub');
+  if (sub) sub.textContent = version === 0 ? 'Initial plan built — awaiting reviews…' : `Iterated to v${version}`;
+}
+
+// Called on step_complete / stage=stage2 / step=review_round_N
+// ev.provider = founder name; ev.data.avg_score, ev.data.all_ready, ev.data.round
+function handleStage2ReviewRound(ev) {
+  const founder = ev.provider || '';
+  const round = ev.data ? ev.data.round : '?';
+  const avgScore = ev.data ? ev.data.avg_score : null;
+  const allReady = ev.data ? ev.data.all_ready : false;
+  if (!founder) return;
+  const planId = `live-plan-${CSS.escape(founder)}`;
+  const list = document.getElementById(`${planId}-reviews`);
+  if (!list) return;
+  const scoreColor = avgScore >= 7.5 ? 'var(--green)' : avgScore >= 5 ? 'var(--yellow)' : 'var(--red)';
+  const row = document.createElement('div');
+  row.className = 'live-review-row';
+  row.innerHTML = `
+    <span style="color:var(--text-xs);font-family:var(--font-mono);font-size:9px;text-transform:uppercase">Round ${esc(String(round))}</span>
+    <span class="live-review-score" style="color:${scoreColor}">${avgScore != null ? avgScore.toFixed(1) + '/10' : '?'}</span>
+    <span class="live-review-ready ${allReady ? 'yes' : 'no'}">${allReady ? 'ready' : 'iterating'}</span>`;
+  list.appendChild(row);
+}
+
+/* ══════════════════ LIVE STAGE 3 HANDLER ══════════════════ */
+
+// Called on step_complete / stage=stage3 / step=investor_decision
+// ev.provider = investor name; ev.idea_id; ev.data.decision, ev.data.conviction
+function handleStage3Decision(ev) {
+  const investor = ev.provider || '';
+  const ideaId = ev.idea_id || (ev.data && ev.data.idea_id) || '';
+  const decision = ev.data ? ev.data.decision : '';
+  const conviction = ev.data ? ev.data.conviction : null;
+  if (!ideaId) return;
+  // Auto-switch to Pitches tab on first decision
+  const pitchPane = document.getElementById('pane-pitches');
+  if (!pitchPane.classList.contains('active')) switchTab('pitches');
+  const el = document.getElementById('pitchesContent');
+  let grid = el.querySelector('.pitch-grid');
+  if (!grid) {
+    el.innerHTML = '<div class="pitch-grid"></div>';
+    grid = el.querySelector('.pitch-grid');
+  }
+  const cardId = `live-pitch-${CSS.escape(ideaId)}`;
+  let card = document.getElementById(cardId);
+  if (!card) {
+    // Create stub pitch card for this idea
+    card = document.createElement('div');
+    card.className = 'pitch-card';
+    card.id = cardId;
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-xs)">${esc(ideaId)}</span>
+      </div>
+      <div class="investor-votes" style="border-top:none;padding-top:0;margin-top:0">
+        <div class="vote-header" style="margin-bottom:9px">
+          <span class="vote-header-label" id="${cardId}-tally">0 invest</span>
+          <span class="vote-score-big" id="${cardId}-avg" style="font-size:16px">—</span>
+        </div>
+        <div id="${cardId}-votes"></div>
+      </div>`;
+    grid.appendChild(card);
+  }
+  // Append vote row
+  const votesEl = document.getElementById(`${cardId}-votes`);
+  if (votesEl) {
+    const decClass = decision === 'invest' ? 'invest' : 'pass';
+    const convColor = conviction >= 7 ? 'var(--green)' : conviction >= 5 ? 'var(--yellow)' : 'var(--red)';
+    const vrow = document.createElement('div');
+    vrow.className = 'vote-row';
+    vrow.innerHTML = `
+      <span class="vote-dec ${decClass}">${esc(decision.toUpperCase())}</span>
+      <span class="vote-investor"><span class="provider-badge ${investor.toLowerCase()}">${esc(investor)}</span></span>
+      <span class="vote-conv" style="color:${convColor}">${conviction != null ? conviction + '/10' : '—'}</span>`;
+    votesEl.appendChild(vrow);
+  }
+  // Update tally
+  const tallyEl = document.getElementById(`${cardId}-tally`);
+  if (tallyEl) {
+    const rows = document.querySelectorAll(`#${cardId}-votes .vote-row`);
+    const investCount = document.querySelectorAll(`#${cardId}-votes .vote-dec.invest`).length;
+    tallyEl.textContent = `${investCount}/${rows.length} invest`;
+  }
+  // Update avg conviction
+  const avgEl = document.getElementById(`${cardId}-avg`);
+  if (avgEl) {
+    const convRows = [...document.querySelectorAll(`#${cardId}-votes .vote-conv`)];
+    const scores = convRows.map(r => parseFloat(r.textContent)).filter(n => !isNaN(n));
+    if (scores.length) {
+      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+      const avgColor = avg >= 7 ? 'var(--green)' : avg >= 5 ? 'var(--yellow)' : 'var(--red)';
+      avgEl.textContent = avg;
+      avgEl.style.color = avgColor;
+    }
+  }
+}
+
+/* ══════════════════ STEP STATE TRACKER ══════════════════ */
+// Tracks in-flight steps. Key: "stage|step|provider", value: DOM element.
+const _liveSteps = {};
+
+function markStepStart(ev) {
+  const key = `${ev.stage}|${ev.step}|${ev.provider || ''}`;
+  if (_liveSteps[key]) return; // already tracked
+  const log = document.getElementById('eventLog');
+  const row = document.createElement('div');
+  row.className = 'live-step-row';
+  const label = [ev.stage, ev.step, ev.provider].filter(Boolean).join(' › ');
+  row.innerHTML = `<span class="step-state spinning" id="ss-${CSS.escape(key)}"></span><span class="emsg">${esc(label)}</span>`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+  _liveSteps[key] = row;
+}
+
+function markStepDone(ev) {
+  const key = `${ev.stage}|${ev.step}|${ev.provider || ''}`;
+  const row = _liveSteps[key];
+  if (!row) return;
+  const dot = row.querySelector('.step-state');
+  if (dot) { dot.classList.remove('spinning'); dot.classList.add('done'); dot.textContent = '✓'; }
+  delete _liveSteps[key];
 }
 
 /* ══════════════════ INIT ══════════════════ */
