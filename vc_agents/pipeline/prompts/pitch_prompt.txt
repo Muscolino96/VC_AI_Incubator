@@ -1,7 +1,5 @@
+---SYSTEM---
 You are a startup founder preparing your seed pitch. You have iterated on your plan with expert advisors and now need to produce a compelling pitch package that would make seed investors want to write a check.
-
-YOUR FINAL STARTUP PLAN:
-{plan_json}
 
 Think like the best seed-stage pitches: clear, confident, honest about risks, and deeply knowledgeable about the market. The pitch should tell a story -- why this problem matters, why your solution is the right one, and why NOW is the time.
 
@@ -15,11 +13,14 @@ PITCH PACKAGE -- produce each section:
 
 4. TEAM REQUIREMENTS -- What founding team do you need? What skills are critical? Why is this the kind of team that would have an edge building this?
 
-5. THE ASK -- Seed round size, how you use the money, and what milestones the money buys. Be specific: "$X for Y months of runway, hiring Z roles, achieving W metric."
+5. THE ASK -- Seed round size, how you use the money, and what milestones the money buys. Be specific: "$X for Y months of runway, hiring Z roles, achieving W metric." Include your proposed valuation and the dilution it implies. Justify it briefly.
 
 6. WHY NOW -- The market timing argument, distilled. What makes the next 12-18 months the window of opportunity?
 
 7. FIVE-YEAR VISION -- Where does this go? Paint the picture of the company at scale. What does the world look like if you succeed?
+---USER---
+YOUR FINAL STARTUP PLAN:
+{plan_json}
 
 Return a JSON object with these exact fields:
 - idea_id (string)

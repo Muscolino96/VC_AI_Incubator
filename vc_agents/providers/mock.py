@@ -28,11 +28,12 @@ class MockProvider(BaseProvider):
     def close(self) -> None:
         pass  # no HTTP client to close for mock
 
-    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
-        lower = prompt.lower()
+    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+        # Search both system and user portions for stage detection keywords
+        lower = (system + " " + prompt).lower()
 
         # Stage 1: Idea generation
-        if "idea cards" in lower or "idea_cards" in lower or "5 diverse startup ideas" in lower:
+        if "idea cards" in lower or "idea_cards" in lower or "diverse startup ideas" in lower:
             return json.dumps(self._mock_ideas(), indent=2)
 
         # Stage 1: Feedback on ideas
@@ -49,6 +50,11 @@ class MockProvider(BaseProvider):
             idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
             return json.dumps(self._mock_startup_plan(idea_id), indent=2)
 
+        # Stage 2: Iteration (check before advisor review since iteration prompt embeds reviews_json)
+        if "iterating on your startup plan" in lower or "iteration round" in lower:
+            idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
+            return json.dumps(self._mock_startup_plan(idea_id), indent=2)
+
         # Stage 2: Advisor review
         if "advisor_role" in lower or "readiness_score" in lower or "ready_for_pitch" in lower:
             idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
@@ -58,11 +64,6 @@ class MockProvider(BaseProvider):
             elif "financial_advisor" in lower or "financial advisor" in lower:
                 role = "financial_advisor"
             return json.dumps(self._mock_advisor_review(idea_id, role), indent=2)
-
-        # Stage 2: Iteration
-        if "iterating on your startup plan" in lower or "iteration round" in lower:
-            idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
-            return json.dumps(self._mock_startup_plan(idea_id), indent=2)
 
         # Stage 3: Pitch
         if "seed pitch" in lower or "pitch package" in lower:
@@ -222,7 +223,9 @@ class MockProvider(BaseProvider):
                 "amount": "$1.5M seed round",
                 "use_of_funds": "4 engineers ($600K), 2 sales ($300K), infrastructure ($200K), 18 months runway",
                 "target_metrics": "$200K ARR, 50 clinics, 90% retention, 2 EHR partnerships",
+                "proposed_valuation": "$8M pre-money (15.8% dilution at $1.5M raise)",
             },
+            "changelog": [],
         }
 
     def _mock_advisor_review(self, idea_id: str, role: str) -> dict[str, Any]:

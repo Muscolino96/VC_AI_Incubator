@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import csv
+from pathlib import Path
 from typing import Any
-
-import pandas as pd
 
 from vc_agents.providers.base import BaseProvider
 
@@ -14,11 +14,11 @@ def build_portfolio_report(
     pitches: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
     plans: dict[str, dict[str, Any]],
-) -> pd.DataFrame:
+) -> list[dict[str, Any]]:
     """Aggregate investor decisions into a ranked portfolio report.
 
     Each startup is scored by how many investors chose to invest and
-    their average conviction score. The result is a DataFrame sorted
+    their average conviction score. The result is a list of dicts sorted
     by invest count (descending) then conviction (descending).
     """
     rows: list[dict[str, Any]] = []
@@ -51,4 +51,14 @@ def build_portfolio_report(
     for i, row in enumerate(rows):
         row["rank"] = i + 1
 
-    return pd.DataFrame(rows)
+    return rows
+
+
+def write_report_csv(rows: list[dict[str, Any]], path: Path) -> None:
+    """Write portfolio report rows to a CSV file."""
+    if not rows:
+        return
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)

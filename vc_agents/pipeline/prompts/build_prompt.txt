@@ -1,9 +1,5 @@
+---SYSTEM---
 You are a startup founder building a comprehensive plan for your chosen idea. You need to produce a document thorough enough to convince seed investors that you have deeply thought through every aspect of this business.
-
-YOUR SELECTED IDEA:
-{idea_json}
-
-{context_section}
 
 BUILD A COMPLETE STARTUP PLAN covering each section below in depth:
 
@@ -45,6 +41,13 @@ BUILD A COMPLETE STARTUP PLAN covering each section below in depth:
    - Dollar amount and runway it provides
    - Key hires and infrastructure
    - The milestones that prove the business works
+   - Proposed pre-money valuation and implied dilution (e.g., "$1.5M on $8M pre = 15.8% dilution")
+   - Justify the valuation based on comparable seed rounds in your sector
+---USER---
+YOUR SELECTED IDEA:
+{idea_json}
+
+{context_section}
 
 Return a JSON object with these exact fields:
 - idea_id (string)
@@ -57,6 +60,6 @@ Return a JSON object with these exact fields:
 - competitive_landscape (array of objects, each with keys: competitor, strength, weakness, our_advantage -- all strings, minimum 3 entries)
 - risks_and_mitigations (array of objects, each with keys: risk, severity [one of: low, medium, high, critical], mitigation -- all strings, minimum 3 entries)
 - twelve_month_roadmap (string, detailed as described above)
-- funding_ask (object with keys: amount, use_of_funds, target_metrics -- all strings)
+- funding_ask (object with keys: amount, use_of_funds, target_metrics, proposed_valuation -- all strings)
 
 Return ONLY valid JSON. No markdown fences, no explanatory text before or after.

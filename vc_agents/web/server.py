@@ -13,6 +13,7 @@ import json
 import os
 import threading
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,17 @@ app = FastAPI(title="VC AI Incubator", version="2.0.0")
 
 # In-memory state for active and completed runs
 _runs: dict[str, dict[str, Any]] = {}
+_runs_lock = threading.Lock()
 _ws_clients: list[WebSocket] = []
+_ws_lock: asyncio.Lock | None = None  # Created on first async access
+
+
+def _get_ws_lock() -> asyncio.Lock:
+    """Get or create the WebSocket asyncio lock (must be called from async context)."""
+    global _ws_lock
+    if _ws_lock is None:
+        _ws_lock = asyncio.Lock()
+    return _ws_lock
 
 
 # ---------------------------------------------------------------------------
@@ -42,13 +53,18 @@ async def _broadcast(data: dict[str, Any]) -> None:
     """Send event to all connected WebSocket clients."""
     message = json.dumps(data, default=str)
     disconnected = []
-    for ws in _ws_clients:
+    async with _get_ws_lock():
+        clients_snapshot = list(_ws_clients)
+    for ws in clients_snapshot:
         try:
             await ws.send_text(message)
         except Exception:
             disconnected.append(ws)
-    for ws in disconnected:
-        _ws_clients.remove(ws)
+    if disconnected:
+        async with _get_ws_lock():
+            for ws in disconnected:
+                if ws in _ws_clients:
+                    _ws_clients.remove(ws)
 
 
 def _make_emit(run_id: str, loop: asyncio.AbstractEventLoop) -> EventCallback:
@@ -57,10 +73,11 @@ def _make_emit(run_id: str, loop: asyncio.AbstractEventLoop) -> EventCallback:
         payload = event.to_dict()
         payload["run_id"] = run_id
 
-        # Update run state
-        if run_id in _runs:
-            _runs[run_id]["last_event"] = payload
-            _runs[run_id]["events"].append(payload)
+        # Update run state under lock
+        with _runs_lock:
+            if run_id in _runs:
+                _runs[run_id]["last_event"] = payload
+                _runs[run_id]["events"].append(payload)
 
         # Schedule broadcast on the event loop
         asyncio.run_coroutine_threadsafe(_broadcast(payload), loop)
@@ -76,30 +93,11 @@ def _make_emit(run_id: str, loop: asyncio.AbstractEventLoop) -> EventCallback:
 def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEventLoop) -> None:
     """Run the pipeline in a background thread."""
     emit = _make_emit(run_id, loop)
-    _runs[run_id]["status"] = "running"
-    _runs[run_id]["started_at"] = time.time()
+    with _runs_lock:
+        _runs[run_id]["status"] = "running"
+        _runs[run_id]["started_at"] = time.time()
 
-    # Inject runtime API keys into environment (scoped to this thread)
-    api_keys = config.get("api_keys", {})
-    for env_var, value in api_keys.items():
-        if value and value.strip():
-            os.environ[env_var] = value.strip()
-
-    # Inject model overrides
-    models = config.get("models", {})
-    if models.get("openai"):
-        os.environ["OPENAI_MODEL"] = models["openai"]
-    if models.get("anthropic"):
-        os.environ["ANTHROPIC_MODEL"] = models["anthropic"]
-    if models.get("deepseek"):
-        os.environ["DEEPSEEK_MODEL"] = models["deepseek"]
-    if models.get("gemini"):
-        os.environ["GEMINI_MODEL"] = models["gemini"]
-
-    # Inject sector focus
     sector = config.get("sector_focus", "")
-    if sector:
-        os.environ["SECTOR_FOCUS"] = sector
 
     try:
         run_dir = run_pipeline(
@@ -110,14 +108,17 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             ideas_per_provider=config.get("ideas_per_provider", 5),
             sector_focus=sector,
             emit=emit,
+            provider_config=config,
         )
-        _runs[run_id]["status"] = "complete"
-        _runs[run_id]["run_dir"] = str(run_dir)
-        _runs[run_id]["completed_at"] = time.time()
+        with _runs_lock:
+            _runs[run_id]["status"] = "complete"
+            _runs[run_id]["run_dir"] = str(run_dir)
+            _runs[run_id]["completed_at"] = time.time()
     except Exception as exc:
-        _runs[run_id]["status"] = "error"
-        _runs[run_id]["error"] = str(exc)
-        _runs[run_id]["completed_at"] = time.time()
+        with _runs_lock:
+            _runs[run_id]["status"] = "error"
+            _runs[run_id]["error"] = str(exc)
+            _runs[run_id]["completed_at"] = time.time()
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +130,7 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
 async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
     """Launch a new pipeline run."""
     config = config or {}
-    run_id = f"run_{int(time.time())}"
+    run_id = f"run_{uuid.uuid4().hex[:12]}"
 
     _runs[run_id] = {
         "run_id": run_id,
@@ -143,7 +144,7 @@ async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
         "completed_at": None,
     }
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     thread = threading.Thread(
         target=_run_in_thread, args=(run_id, config, loop), daemon=True,
     )
@@ -202,9 +203,10 @@ async def get_results(run_id: str) -> JSONResponse:
     # Read CSV report if it exists
     csv_path = run_dir / "portfolio_report.csv"
     if csv_path.exists():
-        import pandas as pd
-        df = pd.read_csv(csv_path)
-        results["portfolio_report"] = df.to_dict(orient="records")
+        import csv
+        with csv_path.open(encoding="utf-8", newline="") as csvf:
+            reader = csv.DictReader(csvf)
+            results["portfolio_report"] = list(reader)
 
     return JSONResponse(results)
 
@@ -218,7 +220,8 @@ async def get_results(run_id: str) -> JSONResponse:
 async def websocket_endpoint(ws: WebSocket) -> None:
     """WebSocket for live pipeline event streaming."""
     await ws.accept()
-    _ws_clients.append(ws)
+    async with _get_ws_lock():
+        _ws_clients.append(ws)
     try:
         while True:
             # Keep connection alive; client can send pings
@@ -228,8 +231,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
-        if ws in _ws_clients:
-            _ws_clients.remove(ws)
+        async with _get_ws_lock():
+            if ws in _ws_clients:
+                _ws_clients.remove(ws)
 
 
 # ---------------------------------------------------------------------------

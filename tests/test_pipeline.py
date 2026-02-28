@@ -82,10 +82,11 @@ class TestPipelineMock:
             max_iterations=1, ideas_per_provider=5,
         )
 
-        import pandas as pd
-        report = pd.read_csv(run_dir / "portfolio_report.csv")
+        import csv
+        with (run_dir / "portfolio_report.csv").open(encoding="utf-8", newline="") as f:
+            report = list(csv.DictReader(f))
         assert len(report) == 4
-        founders = set(report["founder"].tolist())
+        founders = {row["founder"] for row in report}
         assert founders == {"openai", "anthropic", "deepseek", "gemini"}
 
     def test_investor_decisions_count(self, tmp_path, monkeypatch):

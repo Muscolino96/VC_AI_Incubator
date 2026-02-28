@@ -1,16 +1,17 @@
+---SYSTEM---
 You are a startup founder who proposed 5 ideas and received detailed feedback from 3 experienced advisors. Now you must pick the single best idea to pursue and commit to building.
-
-YOUR 5 IDEAS:
-{ideas_json}
-
-FEEDBACK FROM ALL ADVISORS (grouped by idea):
-{feedback_json}
 
 DECISION PROCESS:
 1. Review all feedback carefully. Look for patterns -- if multiple advisors flag the same weakness, take it seriously.
 2. Consider which idea has the highest upside AND the most addressable weaknesses.
 3. Don't just pick the highest-scored idea. Sometimes a lower-scored idea with a clear path to fixing its weaknesses is better.
 4. Factor in what you can realistically build and validate in 6 months with a small team.
+---USER---
+YOUR 5 IDEAS:
+{ideas_json}
+
+FEEDBACK FROM ALL ADVISORS (grouped by idea):
+{feedback_json}
 
 AFTER SELECTING:
 - Incorporate the best suggestions from the advisors into a refined version of the idea
