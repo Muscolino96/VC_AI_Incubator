@@ -505,10 +505,11 @@ def run_stage2(
 
     founders_list = roles.founders if roles is not None else providers
 
-    final_plans: dict[str, dict[str, Any]] = {}
-    all_reviews: list[dict[str, Any]] = []
-
-    for founder in founders_list:
+    def _run_founder_stage2(
+        founder: BaseProvider,
+    ) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+        """Run one founder's full Stage 2 cycle. Returns (name, final_plan, reviews)."""
+        founder_reviews: list[dict[str, Any]] = []  # local per-founder, not shared
         selection = selections[founder.name]
         idea = selection["refined_idea"]
         idea_id = idea["idea_id"]
@@ -534,14 +535,32 @@ def run_stage2(
             # Advisors review — all role-assigned advisors except the founder themselves
             advisors_pool = roles.advisors if roles is not None else providers
             advisors = [a for a in advisors_pool if a.name != founder.name]
-            round_reviews: list[dict[str, Any]] = []
 
+            # Inner parallel advisor reviews
+            def review_task(task: dict[str, Any]) -> dict[str, Any]:
+                adv = task["advisor"]
+                role = task["role"]
+                prompt_r = advisor_prompt.format(
+                    provider_name=adv.name,
+                    advisor_role=role["key"],
+                    advisor_role_display=role["display"],
+                    advisor_role_description=role["description"],
+                    plan_json=json.dumps(task["plan"], indent=2),
+                    previous_feedback_section=task["prev_section"],
+                    changelog_section=task["changelog_section"],
+                )
+                return retry_json_call(
+                    adv, prompt_r, schema=ADVISOR_REVIEW_SCHEMA,
+                    context=f"review ({adv.name}/{task['idea_id']}/round{task['round_num']})",
+                    max_retries=retry_max,
+                    system=advisor_system,
+                )
+
+            advisor_tasks = []
             for i, advisor in enumerate(advisors):
                 role = ADVISOR_ROLES[(i + round_num - 1) % len(ADVISOR_ROLES)]
-
-                # Build previous feedback section
                 prev_feedback = [
-                    r for r in all_reviews
+                    r for r in founder_reviews
                     if r["idea_id"] == idea_id and r["reviewer_provider"] == advisor.name
                 ]
                 prev_section = ""
@@ -550,7 +569,6 @@ def run_stage2(
                         "PREVIOUS FEEDBACK YOU GAVE (check if it was addressed):\n"
                         + json.dumps(prev_feedback, indent=2)
                     )
-
                 changelog = plan.get("changelog", [])
                 changelog_section = ""
                 if changelog:
@@ -558,24 +576,20 @@ def run_stage2(
                         "FOUNDER'S CHANGELOG FROM LAST ITERATION:\n"
                         + json.dumps(changelog, indent=2)
                     )
+                advisor_tasks.append({
+                    "advisor": advisor,
+                    "role": role,
+                    "plan": plan,
+                    "idea_id": idea_id,
+                    "round_num": round_num,
+                    "prev_section": prev_section,
+                    "changelog_section": changelog_section,
+                })
 
-                prompt = advisor_prompt.format(
-                    provider_name=advisor.name,
-                    advisor_role=role["key"],
-                    advisor_role_display=role["display"],
-                    advisor_role_description=role["description"],
-                    plan_json=json.dumps(plan, indent=2),
-                    previous_feedback_section=prev_section,
-                    changelog_section=changelog_section,
-                )
-                review = retry_json_call(
-                    advisor, prompt, schema=ADVISOR_REVIEW_SCHEMA,
-                    context=f"review ({advisor.name}/{idea_id}/round{round_num})",
-                    max_retries=retry_max,
-                    system=advisor_system,
-                )
-                round_reviews.append(review)
-                all_reviews.append(review)
+            round_reviews: list[dict[str, Any]] = list(
+                _map_concurrently(review_task, advisor_tasks, concurrency)
+            )
+            founder_reviews.extend(round_reviews)
 
             _write_jsonl(
                 run_dir / f"stage2_{founder.name}_reviews_round{round_num}.jsonl",
@@ -650,7 +664,16 @@ def run_stage2(
                 [plan],
             )
 
-        final_plans[founder.name] = plan
+        return founder.name, plan, founder_reviews
+
+    # Run all founders concurrently; merge per-founder review lists afterward (thread-safe)
+    final_plans: dict[str, dict[str, Any]] = {}
+    all_reviews: list[dict[str, Any]] = []
+    for f_name, f_plan, f_reviews in _map_concurrently(
+        _run_founder_stage2, founders_list, concurrency
+    ):
+        final_plans[f_name] = f_plan
+        all_reviews.extend(f_reviews)
 
     _write_jsonl(run_dir / "stage2_final_plans.jsonl", list(final_plans.values()))
     _write_jsonl(run_dir / "stage2_all_reviews.jsonl", all_reviews)
@@ -861,7 +884,7 @@ def run_pipeline(
         if checkpoint and checkpoint.get("stage2_complete"):
             logger.info("Resuming: loading Stage 2 plans from checkpoint")
             plans_list = _load_jsonl(run_dir / "stage2_final_plans.jsonl")
-            final_plans = {p["idea_id"]: p for p in plans_list}
+            final_plans = {p["founder_provider"]: p for p in plans_list}
         else:
             final_plans = run_stage2(
                 providers, selections, retry_max, concurrency, max_iterations, run_dir,
