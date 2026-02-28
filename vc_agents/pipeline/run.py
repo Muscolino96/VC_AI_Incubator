@@ -506,33 +506,60 @@ def run_stage1(
     _write_jsonl(run_dir / "stage1_feedback.jsonl", all_feedback)
     logger.info("  Collected %d feedback items", len(all_feedback))
 
-    # --- Step 1c: Each founder selects best idea (parallel) ---
-    logger.info("Step 1c: Founders select best idea")
+    # --- Step 1c: Each founder selects best idea (or auto-selects if only 1) ---
+    logger.info("Step 1c: Founders select best idea (ideas_per_provider=%d)", ideas_per_provider)
     selections: dict[str, dict[str, Any]] = {}
 
-    def selection_task(provider: BaseProvider) -> tuple[str, dict[str, Any]]:
-        my_ideas = all_ideas[provider.name]
-        my_idea_ids = {idea["idea_id"] for idea in my_ideas}
-        my_feedback = [f for f in all_feedback if f["idea_id"] in my_idea_ids]
-        feedback_by_idea: dict[str, list[dict[str, Any]]] = {}
-        for fb in my_feedback:
-            feedback_by_idea.setdefault(fb["idea_id"], []).append(fb)
-        prompt = select_prompt.format(
-            provider_name=provider.name,
-            ideas_json=json.dumps(my_ideas, indent=2),
-            feedback_json=json.dumps(feedback_by_idea, indent=2),
-            ideas_count=ideas_per_provider,
-        )
-        result = retry_json_call(
-            provider, prompt, schema=SELECTION_SCHEMA,
-            context=f"selection ({provider.name})", max_retries=retry_max,
-            system=select_system,
-        )
-        logger.info("  %s selected idea: %s", provider.name, result["selected_idea_id"])
-        return provider.name, result
+    if ideas_per_provider == 1:
+        # Auto-select: skip the LLM call. Build a synthetic selection result
+        # conforming to SELECTION_SCHEMA from the single idea + its feedback.
+        logger.info("  ideas_per_provider=1: auto-selecting single idea for each founder")
+        for provider in founders:
+            my_ideas = all_ideas[provider.name]
+            idea = my_ideas[0]
+            # Collect feedback for this idea to build a brief reasoning string
+            my_feedback = [f for f in all_feedback if f["idea_id"] == idea["idea_id"]]
+            avg_score = (
+                sum(f.get("score", 5) for f in my_feedback) / len(my_feedback)
+                if my_feedback else 5.0
+            )
+            synthetic = {
+                "selected_idea_id": idea["idea_id"],
+                "founder_provider": provider.name,
+                "reasoning": (
+                    f"Auto-selected the only idea '{idea['idea_id']}' (single-idea mode). "
+                    f"Advisor feedback average score: {avg_score:.1f}. "
+                    f"Proceeding with this idea incorporating advisor suggestions."
+                ),
+                "refined_idea": dict(idea),  # carry the idea through unchanged
+            }
+            selections[provider.name] = synthetic
+            logger.info("  %s auto-selected idea: %s", provider.name, idea["idea_id"])
+    else:
+        # Normal path: each founder calls the LLM to select (parallel)
+        def selection_task(provider: BaseProvider) -> tuple[str, dict[str, Any]]:
+            my_ideas = all_ideas[provider.name]
+            my_idea_ids = {idea["idea_id"] for idea in my_ideas}
+            my_feedback = [f for f in all_feedback if f["idea_id"] in my_idea_ids]
+            feedback_by_idea: dict[str, list[dict[str, Any]]] = {}
+            for fb in my_feedback:
+                feedback_by_idea.setdefault(fb["idea_id"], []).append(fb)
+            prompt = select_prompt.format(
+                provider_name=provider.name,
+                ideas_json=json.dumps(my_ideas, indent=2),
+                feedback_json=json.dumps(feedback_by_idea, indent=2),
+                ideas_count=ideas_per_provider,
+            )
+            result = retry_json_call(
+                provider, prompt, schema=SELECTION_SCHEMA,
+                context=f"selection ({provider.name})", max_retries=retry_max,
+                system=select_system,
+            )
+            logger.info("  %s selected idea: %s", provider.name, result["selected_idea_id"])
+            return provider.name, result
 
-    for name, result in _map_concurrently(selection_task, founders, concurrency):
-        selections[name] = result
+        for name, result in _map_concurrently(selection_task, founders, concurrency):
+            selections[name] = result
 
     _write_jsonl(run_dir / "stage1_selections.jsonl", list(selections.values()))
     emit(PipelineEvent(
