@@ -2,6 +2,7 @@
 
 import json
 import shutil
+import time as _time_module
 from pathlib import Path
 
 import pytest
@@ -296,3 +297,52 @@ class TestDeliberation:
             records = _read_jsonl(f)
             assert len(records) == 1
             validate(instance=records[0], schema=DELIBERATION_SCHEMA)
+
+
+# ---------------------------------------------------------------------------
+# Parallelization Tests
+# ---------------------------------------------------------------------------
+
+
+class TestParallelization:
+    """PARA-06: Verify wall-clock speedup from concurrency."""
+
+    def test_para06_wall_clock_speedup(self, tmp_path, monkeypatch):
+        """Concurrent run (concurrency=4) completes in <=40% of sequential time (concurrency=1)."""
+        from vc_agents.providers.mock import MockProvider
+
+        # Patch generate to add a small artificial latency so wall-clock difference is measurable
+        original_generate = MockProvider.generate
+
+        def slow_generate(self, prompt: str, system: str = "") -> str:
+            _time_module.sleep(0.05)
+            return original_generate(self, prompt, system=system)
+
+        monkeypatch.setattr(MockProvider, "generate", slow_generate)
+
+        # Sequential baseline
+        monkeypatch.chdir(tmp_path)
+        t0 = _time_module.monotonic()
+        run_pipeline(
+            use_mock=True, concurrency=1, retry_max=1,
+            max_iterations=1, ideas_per_provider=2,
+        )
+        sequential_time = _time_module.monotonic() - t0
+
+        # Concurrent run
+        t1 = _time_module.monotonic()
+        run_pipeline(
+            use_mock=True, concurrency=4, retry_max=1,
+            max_iterations=1, ideas_per_provider=2,
+        )
+        concurrent_time = _time_module.monotonic() - t1
+
+        ratio = concurrent_time / sequential_time
+        print(
+            f"\nWall-clock: sequential={sequential_time:.2f}s, "
+            f"concurrent={concurrent_time:.2f}s, ratio={ratio:.2%}"
+        )
+        assert ratio <= 0.40, (
+            f"Concurrent run took {ratio:.1%} of sequential time — expected <=40%. "
+            f"sequential={sequential_time:.2f}s, concurrent={concurrent_time:.2f}s"
+        )
