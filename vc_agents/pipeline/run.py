@@ -347,6 +347,33 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def _load_founder_plan_from_disk(founder_name: str, run_dir: Path) -> dict[str, Any]:
+    """Load the highest-versioned Stage 2 plan file for a given founder.
+
+    Files follow the pattern: stage2_{founder_name}_plan_v{N}.jsonl
+    where N is a non-negative integer. Returns the single record from the
+    file with the highest N.
+
+    Raises FileNotFoundError if no matching files exist.
+    """
+    matches = list(run_dir.glob(f"stage2_{founder_name}_plan_v*.jsonl"))
+    if not matches:
+        raise FileNotFoundError(
+            f"No Stage 2 plan files found for {founder_name} in {run_dir}"
+        )
+
+    def _version_key(p: Path) -> int:
+        # Extract integer N from "stage2_{name}_plan_vN.jsonl"
+        stem = p.stem  # e.g. "stage2_openai_plan_v2"
+        try:
+            return int(stem.rsplit("_v", 1)[1])
+        except (IndexError, ValueError):
+            return -1
+
+    highest = max(matches, key=_version_key)
+    return _load_jsonl(highest)[0]
+
+
 def _save_checkpoint(run_dir: Path, data: dict[str, Any]) -> None:
     """Save pipeline checkpoint to disk."""
     checkpoint_path = run_dir / "checkpoint.json"
@@ -530,10 +557,15 @@ def run_stage2(
     emit: EventCallback = noop_callback,
     roles: RoleAssignment | None = None,
     deliberation_enabled: bool = False,
+    founders_override: list[BaseProvider] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Each founder builds a plan; advisors review; founders iterate until ready.
 
     Returns: dict mapping provider_name -> final startup plan.
+
+    founders_override: when provided, use this list as the founders instead of
+        roles.founders or providers. Used by the partial-resume path in
+        run_pipeline to run only the remaining (not-yet-done) founders.
     """
     logger.info("=== STAGE 2: Build and Iterate (max %d rounds) ===", max_iterations)
     emit(PipelineEvent(type=EventType.STAGE_START, stage="stage2", message="Build and Iterate"))
@@ -543,7 +575,12 @@ def run_stage2(
     iterate_system, iterate_prompt = load_prompt_pair("iterate_prompt.txt")
     deliberation_system, deliberation_user = load_prompt_pair("deliberation_prompt.txt")
 
-    founders_list = roles.founders if roles is not None else providers
+    if founders_override is not None:
+        founders_list = founders_override
+    elif roles is not None:
+        founders_list = roles.founders
+    else:
+        founders_list = providers
 
     def _run_founder_stage2(
         founder: BaseProvider,
@@ -714,6 +751,15 @@ def run_stage2(
     ):
         final_plans[f_name] = f_plan
         all_reviews.extend(f_reviews)
+        # Per-founder checkpoint: record this founder as done so a crash
+        # mid-Stage-2 can resume without re-running completed founders.
+        _save_checkpoint(
+            run_dir,
+            {
+                **(_load_checkpoint(run_dir) or {}),
+                "stage2_founders_done": list(final_plans.keys()),
+            },
+        )
 
     _write_jsonl(run_dir / "stage2_final_plans.jsonl", list(final_plans.values()))
     _write_jsonl(run_dir / "stage2_all_reviews.jsonl", all_reviews)
@@ -942,10 +988,41 @@ def run_pipeline(
             plans_list = _load_jsonl(run_dir / "stage2_final_plans.jsonl")
             final_plans = {p["founder_provider"]: p for p in plans_list}
         else:
-            final_plans = run_stage2(
-                providers, selections, retry_max, concurrency, max_iterations, run_dir,
-                emit=emit, roles=roles, deliberation_enabled=effective_deliberation,
-            )
+            founders_done: list[str] = (checkpoint or {}).get("stage2_founders_done", [])
+            all_founders: list[BaseProvider] = roles.founders if roles is not None else providers
+
+            # Load plans for founders that already completed before the crash
+            final_plans: dict[str, dict[str, Any]] = {}
+            for founder in all_founders:
+                if founder.name in founders_done:
+                    logger.info(
+                        "Resuming: skipping %s (already in stage2_founders_done)",
+                        founder.name,
+                    )
+                    final_plans[founder.name] = _load_founder_plan_from_disk(
+                        founder.name, run_dir
+                    )
+
+            # Run Stage 2 only for the remaining founders
+            remaining = [f for f in all_founders if f.name not in founders_done]
+            if remaining:
+                partial = run_stage2(
+                    providers, selections, retry_max, concurrency, max_iterations, run_dir,
+                    emit=emit, roles=roles, deliberation_enabled=effective_deliberation,
+                    founders_override=remaining,
+                )
+                final_plans.update(partial)
+            else:
+                logger.info("Resuming: all founders already done, skipping Stage 2")
+                emit(PipelineEvent(
+                    type=EventType.STAGE_START, stage="stage2",
+                    message="Build and Iterate",
+                ))
+                emit(PipelineEvent(
+                    type=EventType.STAGE_COMPLETE, stage="stage2",
+                    message="Build and Iterate complete",
+                ))
+
             _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True})
 
         # Stage 3: Seed Pitch
