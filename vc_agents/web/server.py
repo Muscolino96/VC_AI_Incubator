@@ -125,6 +125,11 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
         or base_urls.get("gemini")
         or os.getenv("SLOT4_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
     )
+    # Inject named overrides so _build_providers_from_config can pick them up
+    # when pipeline.yaml is present (provider names match pipeline.yaml entry names)
+    config.setdefault("base_urls", {})
+    config["base_urls"]["deepseek"] = slot3_base_url
+    config["base_urls"]["gemini"] = slot4_base_url
 
     try:
         run_dir = run_pipeline(

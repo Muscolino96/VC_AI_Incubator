@@ -28,7 +28,7 @@ class MockProvider(BaseProvider):
     def close(self) -> None:
         pass  # no HTTP client to close for mock
 
-    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "") -> str:
         # Search both system and user portions for stage detection keywords
         lower = (system + " " + prompt).lower()
 

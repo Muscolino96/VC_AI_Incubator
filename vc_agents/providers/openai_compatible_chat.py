@@ -26,7 +26,7 @@ class OpenAICompatibleChat(BaseProvider):
         super().__init__(config)
         self.model = model
 
-    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "") -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
         messages = []
@@ -36,7 +36,6 @@ class OpenAICompatibleChat(BaseProvider):
         body = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": max_tokens,
             "response_format": {"type": "json_object"},
         }
         payload = self._request_json("POST", "/chat/completions", headers, body)

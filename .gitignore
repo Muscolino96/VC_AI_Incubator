@@ -7,3 +7,10 @@
 # python cache
 __pycache__/
 *.pyc
+
+# pipeline run outputs (can be large, never commit)
+out/
+
+# claude & local toolkit meta
+.claude/
+awesome-claude-code-toolkit/

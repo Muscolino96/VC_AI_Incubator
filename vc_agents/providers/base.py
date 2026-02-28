@@ -47,7 +47,7 @@ class RetryConfig:
 
 
 def _default_timeout() -> httpx.Timeout:
-    return httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
+    return httpx.Timeout(connect=10.0, read=600.0, write=10.0, pool=10.0)
 
 
 def extract_json(text: str) -> str:
@@ -159,7 +159,7 @@ class BaseProvider(abc.ABC):
         self._client.close()
 
     @abc.abstractmethod
-    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "") -> str:
         """Generate text from a prompt. Returns raw text (may contain JSON).
 
         Args:

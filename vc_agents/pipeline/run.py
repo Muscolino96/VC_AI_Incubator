@@ -73,6 +73,8 @@ def _build_providers_from_config(
     """Build provider list from pipeline.yaml config."""
     api_keys = (provider_config or {}).get("api_keys", {})
     models_override = (provider_config or {}).get("models", {})
+    # Dashboard sends base URL overrides keyed by provider name (deepseek, gemini)
+    base_url_overrides = (provider_config or {}).get("base_urls", {})
     providers: list[BaseProvider] = []
     for entry in config.get("providers", []):
         cls = PROVIDER_TYPES.get(entry["type"])
@@ -89,8 +91,15 @@ def _build_providers_from_config(
         }
         if api_key:
             kwargs["api_key"] = api_key
-        if entry.get("base_url_env"):
-            kwargs["base_url"] = os.getenv(entry["base_url_env"])
+        if entry.get("base_url_env") or entry.get("base_url"):
+            # Priority: dashboard override > env var > pipeline.yaml base_url field
+            base_url = (
+                base_url_overrides.get(name)
+                or os.getenv(entry.get("base_url_env", ""))
+                or entry.get("base_url")
+            )
+            if base_url:
+                kwargs["base_url"] = base_url
         providers.append(cls(**kwargs))
     return providers
 
@@ -219,6 +228,25 @@ def parse_json(text: str, context: str) -> dict[str, Any]:
         raise ValueError(f"Invalid JSON from {context}: {exc}. Snippet: {snippet}") from exc
 
 
+def _normalize_enum_fields(data: Any, schema: dict[str, Any]) -> Any:
+    """Recursively lowercase string values in fields whose schema specifies an enum.
+
+    LLMs often return 'High' when the schema requires 'high'. This normalizer
+    fixes that without touching free-text fields like names or descriptions.
+    """
+    if schema.get("type") == "string" and "enum" in schema:
+        if isinstance(data, str):
+            return data.lower()
+        return data
+    if schema.get("type") == "object" and isinstance(data, dict):
+        props = schema.get("properties", {})
+        return {k: _normalize_enum_fields(v, props.get(k, {})) for k, v in data.items()}
+    if schema.get("type") == "array" and isinstance(data, list):
+        item_schema = schema.get("items", {})
+        return [_normalize_enum_fields(item, item_schema) for item in data]
+    return data
+
+
 def validate_schema(data: dict[str, Any], schema: dict[str, Any], context: str) -> None:
     try:
         validate(instance=data, schema=schema)
@@ -249,6 +277,7 @@ def retry_json_call(
 
             data = parse_json(text, context)
             if schema is not None:
+                data = _normalize_enum_fields(data, schema)
                 validate_schema(data, schema, context)
             return data
         except Exception as exc:

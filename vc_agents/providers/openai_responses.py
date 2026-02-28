@@ -35,13 +35,12 @@ class OpenAIResponses(BaseProvider):
             return "\n".join(texts)
         return payload.get("output_text", "")
 
-    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "") -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
         body = {
             "model": self.model,
             "input": prompt,
-            "max_output_tokens": max_tokens,
             "text": {"format": {"type": "json_object"}},
         }
         if system:

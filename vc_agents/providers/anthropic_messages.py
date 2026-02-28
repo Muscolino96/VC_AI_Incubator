@@ -4,6 +4,25 @@ from __future__ import annotations
 
 from vc_agents.providers.base import BaseProvider, ProviderConfig
 
+# Anthropic requires max_tokens to be sent and rejects values above the model's limit.
+# Map known model name substrings (longest/most-specific first) to their output ceilings.
+_MODEL_MAX_TOKENS: list[tuple[str, int]] = [
+    ("claude-3-5-haiku",   8_192),
+    ("claude-3-5-sonnet",  8_192),
+    ("claude-3-7-sonnet", 64_000),
+    ("claude-haiku-4",    16_384),
+    ("claude-sonnet-4",   64_000),
+    ("claude-opus-4",     32_000),
+]
+_DEFAULT_MAX_TOKENS = 16_384
+
+
+def _max_tokens_for(model: str) -> int:
+    for substr, limit in _MODEL_MAX_TOKENS:
+        if substr in model:
+            return limit
+    return _DEFAULT_MAX_TOKENS
+
 
 class AnthropicMessages(BaseProvider):
     def __init__(
@@ -22,7 +41,7 @@ class AnthropicMessages(BaseProvider):
         super().__init__(config)
         self.model = model
 
-    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "") -> str:
         api_key = self.config.require_api_key()
         headers = {
             "x-api-key": api_key,
@@ -30,7 +49,7 @@ class AnthropicMessages(BaseProvider):
         }
         body = {
             "model": self.model,
-            "max_tokens": max_tokens,
+            "max_tokens": _max_tokens_for(self.model),
             "messages": [{"role": "user", "content": prompt}],
         }
         if system:
