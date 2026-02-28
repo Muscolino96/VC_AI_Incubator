@@ -4,14 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VC AI Incubator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
+    /* ── Design tokens (Phase 2) ── */
+    --gold: #d4a853;
+    --gold-dim: rgba(212,168,83,.13);
+    --gold-glow: rgba(212,168,83,.35);
+    --ink: #0c0d10;
+    --ink-2: #141519;
+    --border-hi: rgba(255,255,255,.14);
+    --text-dim: #8a8c96;
+    --text-xs: #5a5c68;
+
+    /* Provider colour tokens */
+    --c-openai: #10b981;
+    --c-anthropic: #cc785c;
+    --c-compat: #6d7aff;
+    --c-mistral: #ff7000;
+    --c-google: #8b5cf6;
+    --c-deepseek: #3b82f6;
+    --c-xai: #e2e2e2;
+    --c-meta: #0082fb;
+    --c-cohere: #39d353;
+    --c-qwen: #ed6c18;
+
+    /* Font tokens */
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-serif: 'DM Serif Display', serif;
+
     --bg: #0f1117; --surface: #1a1d27; --surface2: #22253a; --border: #2a2d3a;
     --text: #e4e4e7; --muted: #8b8d97; --accent: #6366f1;
     --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  body { font-family: var(--font-sans); background: var(--bg); color: var(--text); line-height: 1.5; }
   .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
   header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
@@ -98,6 +127,53 @@
   .empty h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
 
   .key-warning { background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--yellow); margin-top: 8px; }
+  .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-right: 6px; }
+  .tier-frontier { background: rgba(99,102,241,.2); color: var(--accent); border: 1px solid rgba(99,102,241,.4); }
+  .tier-standard { background: rgba(59,130,246,.2); color: var(--blue); border: 1px solid rgba(59,130,246,.4); }
+  .tier-budget { background: rgba(34,197,94,.2); color: var(--green); border: 1px solid rgba(34,197,94,.4); }
+  .tier-local { background: rgba(139,141,151,.2); color: var(--muted); border: 1px solid rgba(139,141,151,.4); }
+  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+  .catalog-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: border-color .15s; }
+  .catalog-card:hover { border-color: var(--accent); }
+  .catalog-card .model-id { font-family: monospace; font-size: 13px; color: var(--accent); margin-bottom: 4px; }
+  .catalog-card .provider-name { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+  .catalog-card .pricing { display: flex; gap: 16px; margin: 10px 0; padding: 8px 12px; background: var(--bg); border-radius: 6px; font-size: 12px; }
+  .catalog-card .price-item { display: flex; flex-direction: column; gap: 2px; }
+  .catalog-card .price-label { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+  .catalog-card .price-val { font-weight: 700; color: var(--text); }
+  .catalog-card ul { margin: 6px 0 0 16px; font-size: 12px; color: var(--muted); }
+  .catalog-card ul li { margin-bottom: 2px; }
+  .role-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin: 2px; background: rgba(99,102,241,.15); color: var(--accent); border: 1px solid rgba(99,102,241,.3); }
+  .estimate-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .estimate-box .total { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .estimate-box .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .estimate-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .estimate-row:last-child { border-bottom: none; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 22px; transition: .2s; }
+  .toggle-slider:before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+  .catalog-filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filter-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 500; }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* ── Provider badge: data-prov colour system (STYLE-03) ── */
+  /* Default / fallback: compat purple */
+  .provider-badge,
+  .eprov { color: var(--c-compat); }
+  [data-prov="openai"]    { color: var(--c-openai); }
+  [data-prov="anthropic"] { color: var(--c-anthropic); }
+  [data-prov="deepseek"]  { color: var(--c-deepseek); }
+  [data-prov="gemini"],
+  [data-prov="google"]    { color: var(--c-google); }
+  [data-prov="mistral"]   { color: var(--c-mistral); }
+  [data-prov="xai"]       { color: var(--c-xai); }
+  [data-prov="meta"]      { color: var(--c-meta); }
+  [data-prov="cohere"]    { color: var(--c-cohere); }
+  [data-prov="qwen"]      { color: var(--c-qwen); }
 </style>
 </head>
 <body>
@@ -136,6 +212,15 @@
             <option value="true">Mock (no API keys needed)</option>
             <option value="false">Live (real API calls)</option>
           </select>
+        </div>
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div style="font-size:12px;color:var(--muted);font-weight:500">Advisor Deliberation</div>
+              <div class="hint">Lead advisor synthesizes all reviews before founder iterates</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="cfgDeliberation"><span class="toggle-slider"></span></label>
+          </div>
         </div>
       </div>
 
@@ -204,8 +289,10 @@
     <div class="actions">
       <button class="lg" id="btnRun" onclick="startRun()">Launch Incubator</button>
       <button class="secondary" onclick="loadRuns()">Refresh Runs</button>
+      <button class="secondary" onclick="runEstimate()">Estimate Cost</button>
       <span class="run-status" id="runStatus"></span>
     </div>
+    <div id="estimateResult" style="display:none"></div>
   </div>
 
   <!-- Progress Section -->
@@ -229,8 +316,7 @@
     <div class="tab" data-tab="ideas">Ideas</div>
     <div class="tab" data-tab="plans">Startup Plans</div>
     <div class="tab" data-tab="pitches">Pitches & Decisions</div>
-    <div class="tab" data-tab="portfolio">Portfolio Report</div>
-  </div>
+    <div class="tab" data-tab="portfolio">Portfolio Report</div>    <div class="tab" data-tab="catalog">Model Catalog</div>  </div>
 
   <div class="tab-content active" id="tab-runs">
     <div id="runsList" class="empty"><h2>No runs yet</h2><p>Configure the control panel above and click "Launch Incubator" to start.</p></div>
@@ -239,6 +325,20 @@
   <div class="tab-content" id="tab-plans"><div id="plansContent" class="empty"><p>Run a pipeline to see startup plans here.</p></div></div>
   <div class="tab-content" id="tab-pitches"><div id="pitchesContent" class="empty"><p>Run a pipeline to see pitches and investor decisions here.</p></div></div>
   <div class="tab-content" id="tab-portfolio"><div id="portfolioContent" class="empty"><p>Run a pipeline to see the portfolio report here.</p></div></div>
+  <div class="tab-content" id="tab-catalog">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px">Model Catalog</h2>
+      <button class="secondary" onclick="loadCatalog()" style="padding:6px 14px;font-size:12px">Refresh</button>
+    </div>
+    <div class="catalog-filters" id="catalogFilters">
+      <span style="font-size:12px;color:var(--muted);font-weight:500">Filter by tier:</span>
+      <button class="filter-btn active" onclick="filterCatalog('all', this)">All</button>
+      <button class="filter-btn" onclick="filterCatalog('frontier', this)">Frontier</button>
+      <button class="filter-btn" onclick="filterCatalog('standard', this)">Standard</button>
+      <button class="filter-btn" onclick="filterCatalog('budget', this)">Budget</button>
+    </div>
+    <div id="catalogContent" class="empty"><p>Loading catalog...</p></div>
+  </div>
 </div>
 
 <script>
@@ -304,7 +404,8 @@ function handleEvent(event) {
   const ts = new Date(event.timestamp * 1000).toLocaleTimeString();
   const div = document.createElement('div');
   div.className = 'event';
-  const provTag = event.provider ? ` <span style="color:var(--blue)">[${event.provider}]</span>` : '';
+  const prov = (event.provider || '').toLowerCase();
+  const provTag = event.provider ? ` <span class="eprov" data-prov="${prov}">[${event.provider}]</span>` : '';
   div.innerHTML = `<span class="ts">${ts}</span><span class="type">${event.type}</span>${event.message || ''}${provTag}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
@@ -340,6 +441,8 @@ async function startRun() {
       gemini: document.getElementById('modelGemini').value,
     },
   };
+
+  config.deliberation_enabled = document.getElementById('cfgDeliberation').checked;
 
   // Only send API keys in live mode
   if (!useMock) {
@@ -529,6 +632,111 @@ document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini')
 
 connectWS();
 loadRuns();
+loadCatalog();
+
+// -- Model Catalog --
+let _catalogData = [];
+let _catalogFilter = 'all';
+
+async function loadCatalog() {
+  try {
+    const resp = await fetch('/api/catalog');
+    const data = await resp.json();
+    _catalogData = data.catalog || [];
+    renderCatalog();
+  } catch(e) {
+    document.getElementById('catalogContent').innerHTML = '<div class="empty"><p>Failed to load catalog.</p></div>';
+  }
+}
+
+function filterCatalog(tier, btn) {
+  _catalogFilter = tier;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCatalog();
+}
+
+function renderCatalog() {
+  const el = document.getElementById('catalogContent');
+  const models = _catalogFilter === 'all' ? _catalogData : _catalogData.filter(m => m.tier === _catalogFilter);
+  if (!models.length) { el.innerHTML = '<div class="empty"><p>No models found.</p></div>'; return; }
+  let html = '<div class="catalog-grid">';
+  for (const m of models) {
+    const tier = m.tier || 'standard';
+    const roles = (m.best_roles || []).map(r => `<span class="role-tag">${esc(r)}</span>`).join('');
+    const strengths = (m.strengths || []).map(s => `<li>${esc(s)}</li>`).join('');
+    const weaknesses = (m.weaknesses || []).map(w => `<li>${esc(w)}</li>`).join('');
+    const ctx = m.context_window ? `<span style="font-size:11px;color:var(--muted)">Context: ${esc(String(m.context_window))}</span>` : '';
+    html += `<div class="catalog-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div class="model-id">${esc(m.id)}</div>
+          <div class="provider-name">${esc(m.provider)} &middot; ${esc(m.type || '')}</div>
+        </div>
+        <span class="tier-badge tier-${esc(tier)}">${esc(tier)}</span>
+      </div>
+      <div style="margin-bottom:8px">${roles} ${ctx}</div>
+      <div class="pricing">
+        <div class="price-item"><span class="price-label">Input / 1M</span><span class="price-val">$${m.pricing?.input ?? '?'}</span></div>
+        <div class="price-item"><span class="price-label">Output / 1M</span><span class="price-val">$${m.pricing?.output ?? '?'}</span></div>
+        <div class="price-item"><span class="price-label">Est. Run Cost</span><span class="price-val" id="est-${esc(m.id.replace(/[^a-z0-9]/gi,'_'))}">--</span></div>
+      </div>
+      ${strengths ? `<div style="font-size:11px;color:var(--accent);font-weight:600;margin-top:8px">STRENGTHS</div><ul>${strengths}</ul>` : ''}
+      ${weaknesses ? `<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:6px">WEAKNESSES</div><ul>${weaknesses}</ul>` : ''}
+    </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  // Fetch per-model cost estimates
+  const ids = models.map(m => m.id);
+  fetch('/api/estimate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({model_ids: ids}) })
+    .then(r => r.json())
+    .then(est => {
+      for (const [id, info] of Object.entries(est.per_model || {})) {
+        const key = id.replace(/[^a-z0-9]/gi,'_');
+        const el2 = document.getElementById('est-' + key);
+        if (el2) el2.textContent = '$' + info.estimated_cost_usd;
+      }
+    })
+    .catch(() => {});
+}
+
+// -- Cost Estimator --
+async function runEstimate() {
+  const modelIds = [
+    document.getElementById('modelOpenai').value,
+    document.getElementById('modelAnthropic').value,
+    document.getElementById('modelDeepseek').value,
+    document.getElementById('modelGemini').value,
+  ];
+  try {
+    const resp = await fetch('/api/estimate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({model_ids: modelIds}),
+    });
+    const est = await resp.json();
+    const box = document.getElementById('estimateResult');
+    let rows = '';
+    for (const [id, info] of Object.entries(est.per_model || {})) {
+      rows += `<div class="estimate-row"><span>${esc(id)}</span><span style="font-weight:600">$${info.estimated_cost_usd}</span></div>`;
+    }
+    if (est.skipped_models?.length) {
+      rows += `<div class="estimate-row" style="color:var(--muted)"><span>Not in catalog (skipped)</span><span>${est.skipped_models.join(', ')}</span></div>`;
+    }
+    box.style.display = 'block';
+    box.innerHTML = `<div class="estimate-box">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div><div class="total">$${est.total_estimated_cost_usd}</div><div class="sub">Estimated total — ${(est.total_tokens/1000).toFixed(0)}K tokens across all models</div></div>
+        <span style="font-size:11px;color:var(--muted)">Based on average call profiles</span>
+      </div>
+      <div style="margin-top:12px">${rows}</div>
+    </div>`;
+  } catch(e) {
+    document.getElementById('estimateResult').innerHTML = '<div class="key-warning">Failed to fetch estimate.</div>';
+    document.getElementById('estimateResult').style.display = 'block';
+  }
+}
 </script>
 </body>
 </html>
