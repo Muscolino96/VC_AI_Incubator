@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import os
 
+from vc_agents.logging_config import get_logger
 from vc_agents.providers.base import BaseProvider, ProviderConfig
+
+logger = get_logger("providers.openai_compatible_chat")
 
 
 class OpenAICompatibleChat(BaseProvider):
@@ -24,6 +27,8 @@ class OpenAICompatibleChat(BaseProvider):
             api_key_override=api_key,
         )
         super().__init__(config)
+        self.config.supports_native_json = True
+        logger.debug("OpenAICompatibleChat: native JSON mode active (json_object format enforced)")
         self.model = model
 
     def generate(self, prompt: str, system: str = "") -> str:

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from vc_agents.logging_config import get_logger
 from vc_agents.providers.base import BaseProvider, ProviderConfig
+
+logger = get_logger("providers.openai_responses")
 
 
 class OpenAIResponses(BaseProvider):
@@ -22,6 +25,8 @@ class OpenAIResponses(BaseProvider):
             api_key_override=api_key,
         )
         super().__init__(config)
+        self.config.supports_native_json = True
+        logger.debug("OpenAIResponses: native JSON mode active (json_object format enforced)")
         self.model = model
 
     def _extract_output_text(self, payload: dict[str, Any]) -> str:
