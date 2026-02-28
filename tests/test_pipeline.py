@@ -102,6 +102,21 @@ class TestPipelineMock:
         assert len(decisions) == 12
 
 
+    def test_concurrent_stage2_all_founders_complete(self, tmp_path, monkeypatch):
+        """With concurrency=4, all 4 founders complete Stage 2 and produce final plans."""
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True, concurrency=4, retry_max=1,
+            max_iterations=2, ideas_per_provider=2,
+        )
+        plans = _read_jsonl(run_dir / "stage2_final_plans.jsonl")
+        assert len(plans) == 4
+        founder_names = {p["founder_provider"] for p in plans}
+        assert founder_names == {"openai", "anthropic", "deepseek", "gemini"}
+        # Each founder should have written at least a v0 plan file
+        for name in ["openai", "anthropic", "deepseek", "gemini"]:
+            assert (run_dir / f"stage2_{name}_plan_v0.jsonl").exists()
+
     def test_concurrent_stage1_fires_all_selections(self, tmp_path, monkeypatch):
         """With concurrency=4, all 4 founders' selections are present in output."""
         monkeypatch.chdir(tmp_path)
