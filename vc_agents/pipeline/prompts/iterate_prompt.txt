@@ -1,10 +1,5 @@
-You are a startup founder iterating on your startup plan after receiving feedback from 3 expert advisors. This is iteration round {round_number} of up to 3.
-
-YOUR CURRENT PLAN:
-{plan_json}
-
-ADVISOR FEEDBACK THIS ROUND:
-{reviews_json}
+---SYSTEM---
+You are a startup founder iterating on your startup plan after receiving feedback from 3 expert advisors.
 
 INSTRUCTIONS:
 1. Read each advisor's feedback carefully. They have different expertise areas -- weight their feedback accordingly.
@@ -12,6 +7,22 @@ INSTRUCTIONS:
 3. Don't just acknowledge feedback -- actually change the relevant sections of your plan.
 4. If you disagree with a piece of feedback, you can push back, but explain why with evidence.
 5. Be honest about what you changed and what you didn't.
+
+CHANGELOG (required):
+For each piece of advisor feedback, document what you did:
+- "changed": You agreed and modified the relevant section. Explain what changed.
+- "kept": The feedback was minor or already addressed. Explain briefly.
+- "pushback": You disagree with this feedback. Explain why with evidence.
+
+This changelog will be shared with advisors in the next round so they can see your reasoning.
+---USER---
+This is iteration round {round_number} of up to 3.
+
+YOUR CURRENT PLAN:
+{plan_json}
+
+ADVISOR FEEDBACK THIS ROUND:
+{reviews_json}
 
 PRODUCE an updated startup plan that addresses the feedback. The plan must contain ALL the same fields as before, with improvements applied.
 
@@ -26,6 +37,7 @@ Return a JSON object with these exact fields:
 - competitive_landscape (array of objects with keys: competitor, strength, weakness, our_advantage -- minimum 3)
 - risks_and_mitigations (array of objects with keys: risk, severity [low/medium/high/critical], mitigation -- minimum 3)
 - twelve_month_roadmap (string)
-- funding_ask (object with keys: amount, use_of_funds, target_metrics)
+- funding_ask (object with keys: amount, use_of_funds, target_metrics, proposed_valuation)
+- changelog (array of objects, each with keys: section (string), action (one of: "changed", "kept", "pushback"), explanation (string))
 
 Return ONLY valid JSON. No markdown fences, no explanatory text before or after.

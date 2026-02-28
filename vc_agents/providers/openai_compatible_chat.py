@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from vc_agents.providers.base import BaseProvider, ProviderConfig, extract_json
+from vc_agents.providers.base import BaseProvider, ProviderConfig
 
 
 class OpenAICompatibleChat(BaseProvider):
@@ -14,26 +14,38 @@ class OpenAICompatibleChat(BaseProvider):
         model: str = "deepseek-reasoner",
         name: str = "openai-compatible-chat",
         base_url: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         base_url = base_url or os.getenv("OPENAI_COMPAT_BASE_URL", "https://api.openai.com/v1")
         config = ProviderConfig(
             name=name,
             api_key_env=api_key_env,
             base_url=base_url,
+            api_key_override=api_key,
         )
         super().__init__(config)
         self.model = model
 
-    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
         body = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
         }
         payload = self._request_json("POST", "/chat/completions", headers, body)
         choices = payload.get("choices", [])
         if not choices or not choices[0].get("message", {}).get("content"):
             raise ValueError("Chat completion API returned empty message content.")
-        return extract_json(choices[0]["message"]["content"])
+        usage = payload.get("usage", {})
+        self.usage.add(
+            input_tokens=usage.get("prompt_tokens", 0),
+            output_tokens=usage.get("completion_tokens", 0),
+        )
+        return choices[0]["message"]["content"]

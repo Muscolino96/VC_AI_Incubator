@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from vc_agents.providers.base import BaseProvider, ProviderConfig, extract_json
+from vc_agents.providers.base import BaseProvider, ProviderConfig
 
 
 class OpenAIResponses(BaseProvider):
@@ -13,11 +13,13 @@ class OpenAIResponses(BaseProvider):
         api_key_env: str = "OPENAI_API_KEY",
         model: str = "gpt-5.2",
         name: str = "openai-responses",
+        api_key: str | None = None,
     ) -> None:
         config = ProviderConfig(
             name=name,
             api_key_env=api_key_env,
             base_url="https://api.openai.com/v1",
+            api_key_override=api_key,
         )
         super().__init__(config)
         self.model = model
@@ -33,16 +35,24 @@ class OpenAIResponses(BaseProvider):
             return "\n".join(texts)
         return payload.get("output_text", "")
 
-    def generate(self, prompt: str, max_tokens: int = 4096) -> str:
+    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
         api_key = self.config.require_api_key()
         headers = {"Authorization": f"Bearer {api_key}"}
         body = {
             "model": self.model,
             "input": prompt,
             "max_output_tokens": max_tokens,
+            "text": {"format": {"type": "json_object"}},
         }
+        if system:
+            body["instructions"] = system
         payload = self._request_json("POST", "/responses", headers, body)
         text = self._extract_output_text(payload)
         if not text:
             raise ValueError("OpenAI Responses API returned empty output_text.")
-        return extract_json(text)
+        usage = payload.get("usage", {})
+        self.usage.add(
+            input_tokens=usage.get("input_tokens", 0),
+            output_tokens=usage.get("output_tokens", 0),
+        )
+        return text

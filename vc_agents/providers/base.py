@@ -12,13 +12,28 @@ from typing import Any, Callable
 
 import httpx
 
-from vc_agents.logging_config import get_logger
+from vc_agents.logging_config import get_logger, log_api_call
 
 logger = get_logger("providers")
 
 
 class ProviderError(RuntimeError):
     """Raised when a provider call fails."""
+
+
+@dataclass
+class TokenUsage:
+    """Tracks token consumption for a provider across all calls."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+    def add(self, input_tokens: int, output_tokens: int) -> None:
+        self.input_tokens += input_tokens
+        self.output_tokens += output_tokens
 
 
 @dataclass
@@ -110,9 +125,10 @@ class ProviderConfig:
     api_key_env: str
     base_url: str
     retry: RetryConfig = field(default_factory=RetryConfig)
+    api_key_override: str | None = None
 
     def require_api_key(self) -> str:
-        value = os.getenv(self.api_key_env, "").strip()
+        value = self.api_key_override or os.getenv(self.api_key_env, "").strip()
         if not value:
             raise ProviderError(
                 f"Missing API key for provider '{self.name}'. "
@@ -133,6 +149,7 @@ class BaseProvider(abc.ABC):
     def __init__(self, config: ProviderConfig, client: httpx.Client | None = None) -> None:
         self.config = config
         self._client = client or httpx.Client(timeout=_default_timeout())
+        self.usage = TokenUsage()
 
     @property
     def name(self) -> str:
@@ -142,8 +159,13 @@ class BaseProvider(abc.ABC):
         self._client.close()
 
     @abc.abstractmethod
-    def generate(self, prompt: str, max_tokens: int = 1200) -> str:
+    def generate(self, prompt: str, system: str = "", max_tokens: int = 4096) -> str:
         """Generate text from a prompt. Returns raw text (may contain JSON).
+
+        Args:
+            prompt: The user-facing prompt (task data and output instructions).
+            system: Optional system/persona prompt for providers that support it.
+            max_tokens: Maximum tokens to generate.
 
         HTTP-level retries are handled internally. The caller (pipeline) is
         responsible for JSON parsing and schema validation retries.
@@ -183,11 +205,13 @@ class BaseProvider(abc.ABC):
                     )
 
                 response.raise_for_status()
-                logger.debug(
-                    "HTTP %d from %s (%.0fms)",
-                    response.status_code,
-                    self.config.name,
-                    latency,
+                log_api_call(
+                    logger,
+                    provider=self.config.name,
+                    stage="",
+                    attempt=attempt,
+                    latency_ms=latency,
+                    success=True,
                 )
                 return response.json()
 

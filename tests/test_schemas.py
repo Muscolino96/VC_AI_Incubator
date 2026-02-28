@@ -100,6 +100,104 @@ class TestStartupPlanSchema:
         data = json.loads(raw)
         assert len(data["competitive_landscape"]) >= 3
 
+    def test_changelog_optional_when_absent(self):
+        """Plan validates even when changelog is absent (v0 build)."""
+        plan = {
+            "idea_id": "test-1",
+            "founder_provider": "test",
+            "problem": "x" * 100,
+            "solution": "x" * 100,
+            "market": {"tam": "t", "sam": "s", "som": "s", "growth_rate": "10%", "reasoning": "r"},
+            "business_model": {"revenue_model": "SaaS", "pricing": "$100/mo", "unit_economics": "LTV/CAC 3x"},
+            "go_to_market": "x" * 100,
+            "competitive_landscape": [
+                {"competitor": "A", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "B", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "C", "strength": "s", "weakness": "w", "our_advantage": "o"},
+            ],
+            "risks_and_mitigations": [
+                {"risk": "r1", "severity": "high", "mitigation": "m1"},
+                {"risk": "r2", "severity": "medium", "mitigation": "m2"},
+                {"risk": "r3", "severity": "low", "mitigation": "m3"},
+            ],
+            "twelve_month_roadmap": "x" * 100,
+            "funding_ask": {
+                "amount": "$1.5M",
+                "use_of_funds": "engineering",
+                "target_metrics": "$200K ARR",
+                "proposed_valuation": "$8M pre-money",
+            },
+        }
+        validate(instance=plan, schema=STARTUP_PLAN_SCHEMA)
+
+    def test_changelog_validates_when_present(self):
+        """Plan validates with a properly formed changelog."""
+        plan = {
+            "idea_id": "test-1",
+            "founder_provider": "test",
+            "problem": "x" * 100,
+            "solution": "x" * 100,
+            "market": {"tam": "t", "sam": "s", "som": "s", "growth_rate": "10%", "reasoning": "r"},
+            "business_model": {"revenue_model": "SaaS", "pricing": "$100/mo", "unit_economics": "LTV/CAC 3x"},
+            "go_to_market": "x" * 100,
+            "competitive_landscape": [
+                {"competitor": "A", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "B", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "C", "strength": "s", "weakness": "w", "our_advantage": "o"},
+            ],
+            "risks_and_mitigations": [
+                {"risk": "r1", "severity": "high", "mitigation": "m1"},
+                {"risk": "r2", "severity": "medium", "mitigation": "m2"},
+                {"risk": "r3", "severity": "low", "mitigation": "m3"},
+            ],
+            "twelve_month_roadmap": "x" * 100,
+            "funding_ask": {
+                "amount": "$1.5M",
+                "use_of_funds": "engineering",
+                "target_metrics": "$200K ARR",
+                "proposed_valuation": "$8M pre-money",
+            },
+            "changelog": [
+                {"section": "market", "action": "changed", "explanation": "Narrowed TAM estimate."},
+                {"section": "risks", "action": "kept", "explanation": "Already addressed."},
+                {"section": "go_to_market", "action": "pushback", "explanation": "Advisor underestimates channel velocity."},
+            ],
+        }
+        validate(instance=plan, schema=STARTUP_PLAN_SCHEMA)
+
+    def test_changelog_invalid_action_fails(self):
+        """changelog with invalid action enum fails validation."""
+        bad_changelog = [{"section": "market", "action": "ignored", "explanation": "nope"}]
+        plan = {
+            "idea_id": "test-1",
+            "founder_provider": "test",
+            "problem": "x" * 100,
+            "solution": "x" * 100,
+            "market": {"tam": "t", "sam": "s", "som": "s", "growth_rate": "10%", "reasoning": "r"},
+            "business_model": {"revenue_model": "SaaS", "pricing": "$100/mo", "unit_economics": "LTV/CAC 3x"},
+            "go_to_market": "x" * 100,
+            "competitive_landscape": [
+                {"competitor": "A", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "B", "strength": "s", "weakness": "w", "our_advantage": "o"},
+                {"competitor": "C", "strength": "s", "weakness": "w", "our_advantage": "o"},
+            ],
+            "risks_and_mitigations": [
+                {"risk": "r1", "severity": "high", "mitigation": "m1"},
+                {"risk": "r2", "severity": "medium", "mitigation": "m2"},
+                {"risk": "r3", "severity": "low", "mitigation": "m3"},
+            ],
+            "twelve_month_roadmap": "x" * 100,
+            "funding_ask": {
+                "amount": "$1.5M",
+                "use_of_funds": "engineering",
+                "target_metrics": "$200K ARR",
+                "proposed_valuation": "$8M pre-money",
+            },
+            "changelog": bad_changelog,
+        }
+        with pytest.raises(ValidationError):
+            validate(instance=plan, schema=STARTUP_PLAN_SCHEMA)
+
 
 class TestAdvisorReviewSchema:
     def test_mock_review_validates(self, mock):

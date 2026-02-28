@@ -156,11 +156,25 @@ STARTUP_PLAN_SCHEMA = {
         "funding_ask": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["amount", "use_of_funds", "target_metrics"],
+            "required": ["amount", "use_of_funds", "target_metrics", "proposed_valuation"],
             "properties": {
                 "amount": {"type": "string"},
                 "use_of_funds": {"type": "string"},
                 "target_metrics": {"type": "string"},
+                "proposed_valuation": {"type": "string"},
+            },
+        },
+        "changelog": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["section", "action", "explanation"],
+                "properties": {
+                    "section": {"type": "string"},
+                    "action": {"type": "string", "enum": ["changed", "kept", "pushback"]},
+                    "explanation": {"type": "string"},
+                },
             },
         },
     },

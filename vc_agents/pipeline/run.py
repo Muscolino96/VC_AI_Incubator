@@ -12,11 +12,12 @@ import json
 import os
 import sys
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Iterable
 
-import pandas as pd
+import yaml
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
@@ -29,7 +30,7 @@ from vc_agents.providers import (
     OpenAIResponses,
 )
 from vc_agents.providers.base import BaseProvider, ProviderError, extract_json
-from vc_agents.pipeline.report import build_portfolio_report
+from vc_agents.pipeline.report import build_portfolio_report, write_report_csv
 from vc_agents.schemas import (
     ADVISOR_REVIEW_SCHEMA,
     FEEDBACK_SCHEMA,
@@ -44,6 +45,54 @@ logger = get_logger("pipeline")
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 
 # Advisor role definitions for Stage 2
+MIN_ROUNDS_BEFORE_CONVERGENCE = 2
+
+PIPELINE_YAML = Path(__file__).resolve().parents[2] / "pipeline.yaml"
+
+PROVIDER_TYPES: dict[str, type] = {
+    "openai_responses": OpenAIResponses,
+    "anthropic_messages": AnthropicMessages,
+    "openai_compatible_chat": OpenAICompatibleChat,
+}
+
+
+def _load_config(path: Path = PIPELINE_YAML) -> dict[str, Any]:
+    """Load pipeline.yaml configuration."""
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _build_providers_from_config(
+    config: dict[str, Any],
+    provider_config: dict[str, Any] | None = None,
+) -> list[BaseProvider]:
+    """Build provider list from pipeline.yaml config."""
+    api_keys = (provider_config or {}).get("api_keys", {})
+    models_override = (provider_config or {}).get("models", {})
+    providers: list[BaseProvider] = []
+    for entry in config.get("providers", []):
+        cls = PROVIDER_TYPES.get(entry["type"])
+        if cls is None:
+            raise ValueError(f"Unknown provider type: {entry['type']}")
+        name = entry["name"]
+        model = models_override.get(name) or entry.get("model", "")
+        api_key_env = entry.get("api_key_env", "")
+        api_key = api_keys.get(api_key_env) or api_keys.get(name.upper() + "_API_KEY")
+        kwargs: dict[str, Any] = {
+            "name": name,
+            "model": model,
+            "api_key_env": api_key_env,
+        }
+        if api_key:
+            kwargs["api_key"] = api_key
+        if entry.get("base_url_env"):
+            kwargs["base_url"] = os.getenv(entry["base_url_env"])
+        providers.append(cls(**kwargs))
+    return providers
+
+
 ADVISOR_ROLES = [
     {
         "key": "market_strategist",
@@ -84,6 +133,22 @@ def load_prompt(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def load_prompt_pair(name: str) -> tuple[str, str]:
+    """Load a prompt file and split it into (system, user) sections.
+
+    If the file contains ---SYSTEM--- / ---USER--- delimiters, the content
+    before ---USER--- is the system prompt and the content after is the user prompt.
+    Falls back to ("", full_content) for files without delimiters.
+    """
+    content = load_prompt(name)
+    if "---SYSTEM---" in content and "---USER---" in content:
+        parts = content.split("---USER---", 1)
+        system = parts[0].replace("---SYSTEM---", "").strip()
+        user = parts[1].strip()
+        return system, user
+    return "", content.strip()
+
+
 def parse_json(text: str, context: str) -> dict[str, Any]:
     cleaned = extract_json(text)
     try:
@@ -106,6 +171,7 @@ def retry_json_call(
     schema: dict[str, Any] | None,
     context: str,
     max_retries: int,
+    system: str = "",
 ) -> dict[str, Any]:
     """Call a provider and parse/validate JSON, retrying on parse/schema failures.
 
@@ -116,7 +182,7 @@ def retry_json_call(
     for attempt in range(1, max_retries + 1):
         try:
             start = time.monotonic()
-            text = provider.generate(prompt)
+            text = provider.generate(prompt, system=system)
             latency = (time.monotonic() - start) * 1000
             logger.debug("%s responded in %.0fms", provider.name, latency)
 
@@ -138,6 +204,31 @@ def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for record in records:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Load records from a JSONL file."""
+    records: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                records.append(json.loads(line))
+    return records
+
+
+def _save_checkpoint(run_dir: Path, data: dict[str, Any]) -> None:
+    """Save pipeline checkpoint to disk."""
+    checkpoint_path = run_dir / "checkpoint.json"
+    checkpoint_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _load_checkpoint(run_dir: Path) -> dict[str, Any] | None:
+    """Load pipeline checkpoint from disk if it exists."""
+    checkpoint_path = run_dir / "checkpoint.json"
+    if checkpoint_path.exists():
+        return json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    return None
 
 
 def _map_concurrently(func: Any, items: list[Any], concurrency: int) -> Iterable[Any]:
@@ -171,9 +262,9 @@ def run_stage1(
     logger.info("=== STAGE 1: Ideate and Select ===")
     emit(PipelineEvent(type=EventType.STAGE_START, stage="stage1", message="Ideate and Select"))
 
-    idea_prompt = load_prompt("ideas_prompt.txt")
-    feedback_prompt = load_prompt("feedback_prompt.txt")
-    select_prompt = load_prompt("select_prompt.txt")
+    idea_system, idea_prompt = load_prompt_pair("ideas_prompt.txt")
+    feedback_system, feedback_prompt = load_prompt_pair("feedback_prompt.txt")
+    select_system, select_prompt = load_prompt_pair("select_prompt.txt")
 
     # --- Step 1a: Generate ideas ---
     logger.info("Step 1a: Generating ideas (%d providers x %d ideas)", len(providers), ideas_per_provider)
@@ -189,10 +280,14 @@ def run_stage1(
         )
 
     for provider in providers:
-        prompt = idea_prompt.format(provider_name=provider.name) + sector_instruction
+        prompt = idea_prompt.format(
+            provider_name=provider.name,
+            ideas_count=ideas_per_provider,
+        ) + sector_instruction
         payload = retry_json_call(
             provider, prompt, schema=None,
             context=f"idea generation ({provider.name})", max_retries=retry_max,
+            system=idea_system,
         )
         idea_items = payload.get("ideas")
         if not isinstance(idea_items, list):
@@ -228,6 +323,7 @@ def run_stage1(
             reviewer, prompt, schema=FEEDBACK_SCHEMA,
             context=f"feedback ({reviewer.name}/{idea['idea_id']})",
             max_retries=retry_max,
+            system=feedback_system,
         )
         return result
 
@@ -264,6 +360,7 @@ def run_stage1(
         result = retry_json_call(
             provider, prompt, schema=SELECTION_SCHEMA,
             context=f"selection ({provider.name})", max_retries=retry_max,
+            system=select_system,
         )
         selections[provider.name] = result
         logger.info(
@@ -299,9 +396,9 @@ def run_stage2(
     logger.info("=== STAGE 2: Build and Iterate (max %d rounds) ===", max_iterations)
     emit(PipelineEvent(type=EventType.STAGE_START, stage="stage2", message="Build and Iterate"))
 
-    build_prompt = load_prompt("build_prompt.txt")
-    advisor_prompt = load_prompt("advisor_review_prompt.txt")
-    iterate_prompt = load_prompt("iterate_prompt.txt")
+    build_system, build_prompt = load_prompt_pair("build_prompt.txt")
+    advisor_system, advisor_prompt = load_prompt_pair("advisor_review_prompt.txt")
+    iterate_system, iterate_prompt = load_prompt_pair("iterate_prompt.txt")
 
     final_plans: dict[str, dict[str, Any]] = {}
     all_reviews: list[dict[str, Any]] = []
@@ -321,6 +418,7 @@ def run_stage2(
         plan = retry_json_call(
             founder, prompt, schema=STARTUP_PLAN_SCHEMA,
             context=f"build ({founder.name}/{idea_id})", max_retries=retry_max,
+            system=build_system,
         )
         _write_jsonl(run_dir / f"stage2_{founder.name}_plan_v0.jsonl", [plan])
 
@@ -333,7 +431,7 @@ def run_stage2(
             round_reviews: list[dict[str, Any]] = []
 
             for i, advisor in enumerate(advisors):
-                role = ADVISOR_ROLES[i % len(ADVISOR_ROLES)]
+                role = ADVISOR_ROLES[(i + round_num - 1) % len(ADVISOR_ROLES)]
 
                 # Build previous feedback section
                 prev_feedback = [
@@ -347,6 +445,14 @@ def run_stage2(
                         + json.dumps(prev_feedback, indent=2)
                     )
 
+                changelog = plan.get("changelog", [])
+                changelog_section = ""
+                if changelog:
+                    changelog_section = (
+                        "FOUNDER'S CHANGELOG FROM LAST ITERATION:\n"
+                        + json.dumps(changelog, indent=2)
+                    )
+
                 prompt = advisor_prompt.format(
                     provider_name=advisor.name,
                     advisor_role=role["key"],
@@ -354,11 +460,13 @@ def run_stage2(
                     advisor_role_description=role["description"],
                     plan_json=json.dumps(plan, indent=2),
                     previous_feedback_section=prev_section,
+                    changelog_section=changelog_section,
                 )
                 review = retry_json_call(
                     advisor, prompt, schema=ADVISOR_REVIEW_SCHEMA,
                     context=f"review ({advisor.name}/{idea_id}/round{round_num})",
                     max_retries=retry_max,
+                    system=advisor_system,
                 )
                 round_reviews.append(review)
                 all_reviews.append(review)
@@ -383,7 +491,7 @@ def run_stage2(
                 data={"avg_score": avg_score, "all_ready": all_ready, "round": round_num},
             ))
 
-            if all_ready and avg_score >= 7:
+            if round_num >= MIN_ROUNDS_BEFORE_CONVERGENCE and all_ready and avg_score >= 7.5:
                 logger.info("    Converged! All advisors signal ready for pitch.")
                 break
 
@@ -402,6 +510,7 @@ def run_stage2(
                 founder, prompt, schema=STARTUP_PLAN_SCHEMA,
                 context=f"iterate ({founder.name}/{idea_id}/round{round_num})",
                 max_retries=retry_max,
+                system=iterate_system,
             )
             _write_jsonl(
                 run_dir / f"stage2_{founder.name}_plan_v{round_num}.jsonl",
@@ -428,7 +537,7 @@ def run_stage3(
     concurrency: int,
     run_dir: Path,
     emit: EventCallback = noop_callback,
-) -> pd.DataFrame:
+) -> list[dict[str, Any]]:
     """Each founder pitches; other models evaluate as investors.
 
     Returns: portfolio report DataFrame.
@@ -436,8 +545,8 @@ def run_stage3(
     logger.info("=== STAGE 3: Seed Pitch ===")
     emit(PipelineEvent(type=EventType.STAGE_START, stage="stage3", message="Seed Pitch"))
 
-    pitch_prompt_tmpl = load_prompt("pitch_prompt.txt")
-    investor_prompt_tmpl = load_prompt("investor_eval_prompt.txt")
+    pitch_system, pitch_prompt_tmpl = load_prompt_pair("pitch_prompt.txt")
+    investor_system, investor_prompt_tmpl = load_prompt_pair("investor_eval_prompt.txt")
 
     all_pitches: list[dict[str, Any]] = []
     all_decisions: list[dict[str, Any]] = []
@@ -455,6 +564,7 @@ def run_stage3(
         pitch = retry_json_call(
             founder, prompt, schema=PITCH_SCHEMA,
             context=f"pitch ({founder.name}/{idea_id})", max_retries=retry_max,
+            system=pitch_system,
         )
         all_pitches.append(pitch)
 
@@ -469,6 +579,7 @@ def run_stage3(
             decision = retry_json_call(
                 investor, prompt, schema=INVESTOR_DECISION_SCHEMA,
                 context=f"invest ({investor.name}/{idea_id})", max_retries=retry_max,
+                system=investor_system,
             )
             all_decisions.append(decision)
             logger.info(
@@ -487,7 +598,7 @@ def run_stage3(
 
     # Build portfolio report
     report = build_portfolio_report(providers, all_pitches, all_decisions, final_plans)
-    report.to_csv(run_dir / "portfolio_report.csv", index=False)
+    write_report_csv(report, run_dir / "portfolio_report.csv")
     logger.info("Portfolio report saved to %s", run_dir / "portfolio_report.csv")
 
     return report
@@ -506,6 +617,8 @@ def run_pipeline(
     ideas_per_provider: int = 5,
     sector_focus: str = "",
     emit: EventCallback = noop_callback,
+    provider_config: dict[str, Any] | None = None,
+    resume_dir: Path | None = None,
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
@@ -516,24 +629,47 @@ def run_pipeline(
             MockProvider("gemini"),
         ]
     else:
-        providers = [
-            OpenAIResponses(name="openai", model=os.getenv("OPENAI_MODEL", "gpt-5.2")),
-            AnthropicMessages(name="anthropic", model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5")),
-            OpenAICompatibleChat(
-                name="deepseek",
-                model=os.getenv("DEEPSEEK_MODEL", "deepseek-reasoner"),
-                base_url=os.getenv("DEEPSEEK_BASE_URL"),
-            ),
-            OpenAICompatibleChat(
-                name="gemini",
-                api_key_env=os.getenv("GEMINI_API_KEY_ENV", "GEMINI_API_KEY"),
-                model=os.getenv("GEMINI_MODEL", "gemini-3-pro-preview"),
-                base_url=os.getenv("GEMINI_BASE_URL"),
-            ),
-        ]
+        yaml_config = _load_config()
+        if yaml_config.get("providers"):
+            providers = _build_providers_from_config(yaml_config, provider_config)
+        else:
+            # Fallback to hardcoded defaults if no YAML config
+            api_keys = (provider_config or {}).get("api_keys", {})
+            models = (provider_config or {}).get("models", {})
+            providers = [
+                OpenAIResponses(
+                    name="openai",
+                    model=models.get("openai") or os.getenv("OPENAI_MODEL", "gpt-5.2"),
+                    api_key=api_keys.get("OPENAI_API_KEY"),
+                ),
+                AnthropicMessages(
+                    name="anthropic",
+                    model=models.get("anthropic") or os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5"),
+                    api_key=api_keys.get("ANTHROPIC_API_KEY"),
+                ),
+                OpenAICompatibleChat(
+                    name="deepseek",
+                    model=models.get("deepseek") or os.getenv("DEEPSEEK_MODEL", "deepseek-reasoner"),
+                    base_url=os.getenv("DEEPSEEK_BASE_URL"),
+                    api_key=api_keys.get("DEEPSEEK_API_KEY"),
+                ),
+                OpenAICompatibleChat(
+                    name="gemini",
+                    api_key_env=os.getenv("GEMINI_API_KEY_ENV", "GEMINI_API_KEY"),
+                    model=models.get("gemini") or os.getenv("GEMINI_MODEL", "gemini-3-pro-preview"),
+                    base_url=os.getenv("GEMINI_BASE_URL"),
+                    api_key=api_keys.get("GEMINI_API_KEY"),
+                ),
+            ]
 
-    run_dir = Path("out") / f"run_{int(time.time())}"
-    run_dir.mkdir(parents=True, exist_ok=True)
+    if resume_dir:
+        run_dir = resume_dir
+        checkpoint = _load_checkpoint(run_dir)
+        logger.info("Resuming pipeline from %s (checkpoint: %s)", run_dir, checkpoint)
+    else:
+        run_dir = Path("out") / f"run_{uuid.uuid4().hex[:12]}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint = None
     logger.info("Pipeline output: %s", run_dir)
     emit(PipelineEvent(
         type=EventType.PIPELINE_START, message="Pipeline started",
@@ -542,29 +678,59 @@ def run_pipeline(
 
     try:
         # Stage 1: Ideate and Select
-        selections = run_stage1(
-            providers, ideas_per_provider, retry_max, concurrency, run_dir,
-            sector_focus=sector_focus, emit=emit,
-        )
+        if checkpoint and checkpoint.get("stage1_complete"):
+            logger.info("Resuming: loading Stage 1 selections from checkpoint")
+            selections_list = _load_jsonl(run_dir / "stage1_selections.jsonl")
+            selections = {s["founder_provider"]: s for s in selections_list}
+        else:
+            selections = run_stage1(
+                providers, ideas_per_provider, retry_max, concurrency, run_dir,
+                sector_focus=sector_focus, emit=emit,
+            )
+            _save_checkpoint(run_dir, {"stage1_complete": True})
 
         # Stage 2: Build and Iterate
-        final_plans = run_stage2(
-            providers, selections, retry_max, concurrency, max_iterations, run_dir, emit=emit,
-        )
+        if checkpoint and checkpoint.get("stage2_complete"):
+            logger.info("Resuming: loading Stage 2 plans from checkpoint")
+            plans_list = _load_jsonl(run_dir / "stage2_final_plans.jsonl")
+            final_plans = {p["founder_provider"]: p for p in plans_list}
+        else:
+            final_plans = run_stage2(
+                providers, selections, retry_max, concurrency, max_iterations, run_dir, emit=emit,
+            )
+            _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True})
 
         # Stage 3: Seed Pitch
         report = run_stage3(
             providers, final_plans, retry_max, concurrency, run_dir, emit=emit,
         )
+        _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True, "stage3_complete": True})
 
-        # Print summary
+        # Print portfolio summary
         logger.info("\n=== PORTFOLIO SUMMARY ===")
-        for _, row in report.iterrows():
+        for row in report:
             logger.info(
                 "  #%d %s (%s) -- %d/%d investors, conviction %.1f",
                 row["rank"], row["founder"], row["idea_id"],
                 row["investors_in"], row["investors_total"], row["avg_conviction"],
             )
+
+        # Log and save token usage
+        logger.info("\n=== TOKEN USAGE ===")
+        token_summary: dict[str, Any] = {}
+        for provider in providers:
+            logger.info(
+                "  %s: %d input, %d output, %d total",
+                provider.name, provider.usage.input_tokens,
+                provider.usage.output_tokens, provider.usage.total,
+            )
+            token_summary[provider.name] = {
+                "input_tokens": provider.usage.input_tokens,
+                "output_tokens": provider.usage.output_tokens,
+                "total_tokens": provider.usage.total,
+            }
+        token_usage_path = run_dir / "token_usage.json"
+        token_usage_path.write_text(json.dumps(token_summary, indent=2), encoding="utf-8")
 
         emit(PipelineEvent(
             type=EventType.PIPELINE_COMPLETE, message="Pipeline complete",
@@ -621,6 +787,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "-v", "--verbose", action="store_true",
         help="Enable debug logging",
     )
+    parser.add_argument(
+        "--resume", type=str, default=None,
+        help="Resume a previous run from the given run directory (e.g. out/run_1234567890)",
+    )
     return parser.parse_args(argv)
 
 
@@ -631,6 +801,7 @@ def main(argv: list[str] | None = None) -> int:
 
     use_mock = args.use_mock or os.getenv("USE_MOCK", "0") == "1"
 
+    resume_dir = Path(args.resume) if args.resume else None
     run_dir = run_pipeline(
         use_mock=use_mock,
         concurrency=args.concurrency,
@@ -638,6 +809,7 @@ def main(argv: list[str] | None = None) -> int:
         max_iterations=args.max_iterations,
         ideas_per_provider=args.ideas_per_provider,
         sector_focus=args.sector_focus,
+        resume_dir=resume_dir,
     )
     logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0
