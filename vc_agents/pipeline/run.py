@@ -58,6 +58,46 @@ PROVIDER_TYPES: dict[str, type] = {
 }
 
 
+class PreflightError(RuntimeError):
+    """Raised when one or more providers fail pre-flight validation."""
+
+
+@dataclass
+class PreflightResult:
+    """Result of a single provider pre-flight probe."""
+
+    name: str
+    ok: bool
+    detail: str
+
+
+def run_preflight(providers: list[BaseProvider], concurrency: int) -> None:
+    """Probe every provider with a 1-token call before Stage 1 begins.
+
+    Runs all probes in parallel via _map_concurrently.  MockProvider instances
+    are detected by isinstance check and treated as always passing.
+
+    Raises:
+        PreflightError: If any provider fails the probe, listing each failure.
+    """
+
+    def probe(provider: BaseProvider) -> PreflightResult:
+        if isinstance(provider, MockProvider):
+            return PreflightResult(provider.name, True, "mock — skipped")
+        try:
+            provider.generate("Reply: ok", system="", max_tokens=4)
+            return PreflightResult(provider.name, True, f"OK (model={provider.model})")
+        except Exception as exc:
+            return PreflightResult(provider.name, False, str(exc)[:300])
+
+    results = list(_map_concurrently(probe, providers, concurrency))
+    failures = [r for r in results if not r.ok]
+    if failures:
+        lines = "\n".join(f"  - {r.name}: {r.detail}" for r in failures)
+        raise PreflightError(f"Pre-flight failed:\n{lines}")
+    logger.info("Pre-flight OK: all %d providers reachable", len(results))
+
+
 def _load_config(path: Path = PIPELINE_YAML) -> dict[str, Any]:
     """Load pipeline.yaml configuration."""
     if not path.exists():
@@ -794,6 +834,7 @@ def run_pipeline(
     resume_dir: Path | None = None,
     roles_config: dict[str, Any] | None = None,
     deliberation_enabled: bool = False,
+    skip_preflight: bool = False,
     slot3_base_url: str = "https://api.deepseek.com/v1",
     slot4_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai",
 ) -> Path:
@@ -839,6 +880,11 @@ def run_pipeline(
                     api_key=api_keys.get("GEMINI_API_KEY"),
                 ),
             ]
+
+    # Pre-flight: probe each provider before spending tokens on real work.
+    # Skipped automatically in mock mode (mock providers never make network calls).
+    if not skip_preflight and not use_mock:
+        run_preflight(providers, concurrency)
 
     # Build role assignment: CLI override > YAML roles > default (all do everything)
     effective_roles_config = roles_config or yaml_config.get("roles")
@@ -1008,6 +1054,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--estimate-cost", action="store_true",
         help="Print estimated pipeline cost for the configured models and exit (no API calls made)",
     )
+    parser.add_argument(
+        "--skip-preflight", action="store_true",
+        help="Skip pre-flight provider validation (use when keys are known good)",
+    )
     return parser.parse_args(argv)
 
 
@@ -1049,6 +1099,7 @@ def main(argv: list[str] | None = None) -> int:
         resume_dir=resume_dir,
         roles_config=roles_override,
         deliberation_enabled=args.deliberation,
+        skip_preflight=args.skip_preflight,
     )
     logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0
