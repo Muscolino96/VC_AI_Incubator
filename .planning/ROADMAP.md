@@ -12,7 +12,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 
 - [x] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time (2026-02-28)
 - [x] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins (2026-02-28)
-- [ ] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders
+- [x] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders (2026-02-28)
 - [ ] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts
 - [ ] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs
 - [ ] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors
@@ -66,7 +66,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Add per-founder checkpoint write, resume read path, and TestResume tests (RES-01, RES-02, RES-03, RES-04)
+- [x] 03-01-PLAN.md — Add per-founder checkpoint write, resume read path, and TestResume tests (RES-01, RES-02, RES-03, RES-04)
 
 ### Phase 4: Flexible Idea Count
 **Goal**: Operators can run with 1 or 2 ideas per provider; prompts adapt correctly and no stage breaks
@@ -146,7 +146,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Parallelization | 3/3 | Complete | 2026-02-28 |
 | 2. Pre-flight Validation | 1/1 | Complete | 2026-02-28 |
-| 3. Resume Fix | 0/1 | Not started | - |
+| 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
 | 4. Flexible Idea Count | 0/TBD | Not started | - |
 | 5. New Dashboard | 0/TBD | Not started | - |
 | 6. Dynamic Provider Count | 0/TBD | Not started | - |
