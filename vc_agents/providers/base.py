@@ -126,6 +126,7 @@ class ProviderConfig:
     base_url: str
     retry: RetryConfig = field(default_factory=RetryConfig)
     api_key_override: str | None = None
+    supports_native_json: bool = False
 
     def require_api_key(self) -> str:
         value = self.api_key_override or os.getenv(self.api_key_env, "").strip()

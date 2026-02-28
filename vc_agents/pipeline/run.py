@@ -307,8 +307,15 @@ def retry_json_call(
     HTTP-level retries are handled inside the provider. This function only
     retries on JSON parsing and schema validation errors.
     """
+    effective_retries = 1 if provider.config.supports_native_json else max_retries
+    if provider.config.supports_native_json:
+        logger.debug(
+            "Native JSON mode active for %s — using 1 attempt (max_retries=%d ignored)",
+            provider.name,
+            max_retries,
+        )
     last_error: Exception | None = None
-    for attempt in range(1, max_retries + 1):
+    for attempt in range(1, effective_retries + 1):
         try:
             start = time.monotonic()
             text = provider.generate(prompt, system=system)
@@ -323,11 +330,11 @@ def retry_json_call(
         except Exception as exc:
             last_error = exc
             logger.warning(
-                "%s attempt %d/%d failed: %s", context, attempt, max_retries, exc
+                "%s attempt %d/%d failed: %s", context, attempt, effective_retries, exc
             )
-            if attempt == max_retries:
+            if attempt == effective_retries:
                 break
-    raise RuntimeError(f"{context} failed after {max_retries} attempts: {last_error}")
+    raise RuntimeError(f"{context} failed after {effective_retries} attempts: {last_error}")
 
 
 def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
