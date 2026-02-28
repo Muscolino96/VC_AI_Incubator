@@ -11,7 +11,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - Decimal phases: Urgent insertions only (none planned)
 
 - [x] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time (2026-02-28)
-- [ ] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins
+- [x] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins (2026-02-28)
 - [ ] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders
 - [ ] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts
 - [ ] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs
@@ -52,7 +52,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md — Implement run_preflight() and wire into run_pipeline(); add --skip-preflight flag; write TestPreflight tests (PRE-01, PRE-02, PRE-03, PRE-04, PRE-05)
+- [x] 02-01-PLAN.md — Implement run_preflight() and wire into run_pipeline(); add --skip-preflight flag; write TestPreflight tests (PRE-01, PRE-02, PRE-03, PRE-04, PRE-05)
 
 ### Phase 3: Resume Fix
 **Goal**: A pipeline crash mid-Stage 2 resumes from the last completed founder rather than restarting all of Stage 2
