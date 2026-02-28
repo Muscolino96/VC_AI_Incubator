@@ -800,3 +800,209 @@ class TestFlexibleIdeas:
         assert len(ideas) > 0, "Expected ideas to be generated"
         selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
         assert len(selections) == 4
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Provider Count Tests (Phase 6)
+# ---------------------------------------------------------------------------
+
+
+class TestDynamicProviderCount:
+    """DYN-01 through DYN-05: pipeline works correctly with 2, 4, and 6 providers."""
+
+    def test_dyn01_two_founder_run_completes(self, tmp_path, monkeypatch):
+        """DYN-01: A 2-founder configuration completes all three stages.
+
+        Uses roles_config to split the default 4 mock providers: 2 founders,
+        all 4 as advisors (founder self-review is skipped at line 641 of run.py).
+        """
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            roles_config={
+                "founders": ["openai", "anthropic"],
+                "advisors": ["openai", "anthropic", "deepseek", "gemini"],
+                "investors": ["deepseek", "gemini"],
+            },
+        )
+        assert run_dir.exists()
+        assert (run_dir / "stage1_ideas.jsonl").exists()
+        assert (run_dir / "stage2_final_plans.jsonl").exists()
+        assert (run_dir / "stage3_decisions.jsonl").exists()
+        assert (run_dir / "portfolio_report.csv").exists()
+
+        # 2 founders -> 2 selections, 2 plans, 2 pitches
+        selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
+        assert len(selections) == 2, f"Expected 2 selections (2 founders), got {len(selections)}"
+        plans = _read_jsonl(run_dir / "stage2_final_plans.jsonl")
+        assert len(plans) == 2, f"Expected 2 final plans, got {len(plans)}"
+        # 2 founders * 2 investors each = 4 decisions
+        decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
+        assert len(decisions) == 4, f"Expected 4 investor decisions (2 founders * 2 investors), got {len(decisions)}"
+
+    def test_dyn02_six_provider_run_completes(self, tmp_path, monkeypatch):
+        """DYN-02: A 6-provider all-do-everything run completes all three stages.
+
+        Uses the mock_providers param (added in Plan 01) to inject 6 named providers.
+        All six act as founders, advisors, and investors (no roles_config = all do everything).
+        """
+        from vc_agents.providers.mock import MockProvider as _MP
+        monkeypatch.chdir(tmp_path)
+        six_providers = [_MP(f"provider_{i}") for i in range(6)]
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            mock_providers=six_providers,
+        )
+        assert run_dir.exists()
+        assert (run_dir / "stage1_ideas.jsonl").exists()
+        assert (run_dir / "stage2_final_plans.jsonl").exists()
+        assert (run_dir / "stage3_decisions.jsonl").exists()
+        assert (run_dir / "portfolio_report.csv").exists()
+
+        plans = _read_jsonl(run_dir / "stage2_final_plans.jsonl")
+        assert len(plans) == 6, f"Expected 6 final plans (6 founders), got {len(plans)}"
+        # 6 founders each pitch to 5 investors (everyone except self) = 30
+        decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
+        expected_decisions = 6 * (6 - 1)
+        assert len(decisions) == expected_decisions, (
+            f"Expected {expected_decisions} investor decisions (6 founders * 5 investors), "
+            f"got {len(decisions)}"
+        )
+
+    def test_dyn03_advisor_role_rotation_six_providers(self, tmp_path, monkeypatch):
+        """DYN-03: Advisor role rotation cycles through ADVISOR_ROLES correctly with 6 advisors.
+
+        With 6 advisors and ADVISOR_ROLES having 3 entries, role indices at round 1
+        are [0, 1, 2, 0, 1, 2] (i + round_num - 1) % 3 for i = 0..5.
+        This test verifies the run completes (roles assigned without IndexError) AND
+        that the captured role assignments cycle as expected via monkeypatching.
+        """
+        from vc_agents.providers.mock import MockProvider as _MP
+        import vc_agents.pipeline.run as run_module
+
+        monkeypatch.chdir(tmp_path)
+        six_providers = [_MP(f"adv_{i}") for i in range(6)]
+
+        # Capture role keys assigned to each advisor during reviews
+        captured_roles: list = []
+        original_retry = run_module.retry_json_call
+
+        def capturing_retry(provider, prompt, schema, context, max_retries, system=""):
+            # Detect advisor review calls by context prefix
+            if context.startswith("review ("):
+                # Extract role key from prompt — it contains advisor_role= value
+                for line in prompt.splitlines():
+                    if "market_strategist" in line or "technical_advisor" in line or "financial_advisor" in line:
+                        for role_key in ("market_strategist", "technical_advisor", "financial_advisor"):
+                            if role_key in line:
+                                captured_roles.append(role_key)
+                                break
+                        break
+            return original_retry(provider, prompt, schema, context, max_retries, system=system)
+
+        monkeypatch.setattr(run_module, "retry_json_call", capturing_retry)
+
+        run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            mock_providers=six_providers,
+        )
+
+        # With 6 providers all-do-everything, each of 6 founders has 5 advisors reviewing per round.
+        # Total review calls = 6 founders * 5 advisors * 1 round = 30
+        # All 3 roles must appear (rotation guarantees it with 5+ advisors)
+        role_keys = {"market_strategist", "technical_advisor", "financial_advisor"}
+        captured_set = set(captured_roles)
+        assert captured_set == role_keys, (
+            f"Expected all 3 advisor roles to appear in reviews, got: {captured_set}"
+        )
+
+    def test_dyn04_review_count_two_founder_config(self, tmp_path, monkeypatch):
+        """DYN-04: Review count = len(advisors) - 1 when founder is also an advisor.
+
+        Config: 2 founders (openai, anthropic) + 4 advisors (all 4 mock providers).
+        Each founder's advisor pool = 4 - self = 3 advisors.
+        After 1 iteration: 2 founders * 3 reviews = 6 total review records.
+        """
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            roles_config={
+                "founders": ["openai", "anthropic"],
+                "advisors": ["openai", "anthropic", "deepseek", "gemini"],
+                "investors": ["deepseek", "gemini"],
+            },
+        )
+        all_reviews = _read_jsonl(run_dir / "stage2_all_reviews.jsonl")
+        # 2 founders * 3 reviewers each (4 advisors - self) * 1 round = 6
+        # Note: max_iterations=1 means 1 round of reviews before convergence check
+        expected = 2 * 3 * 1
+        assert len(all_reviews) == expected, (
+            f"Expected {expected} advisor reviews (2 founders * 3 advisors * 1 round), "
+            f"got {len(all_reviews)}"
+        )
+
+    def test_dyn04_review_count_six_providers(self, tmp_path, monkeypatch):
+        """DYN-04: Review count = len(advisors) - 1 with 6 all-do-everything providers.
+
+        Each founder's advisor pool = 6 - self = 5 advisors.
+        After 1 iteration: 6 founders * 5 reviews = 30 total review records.
+        """
+        from vc_agents.providers.mock import MockProvider as _MP
+        monkeypatch.chdir(tmp_path)
+        six_providers = [_MP(f"provider_{i}") for i in range(6)]
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            mock_providers=six_providers,
+        )
+        all_reviews = _read_jsonl(run_dir / "stage2_all_reviews.jsonl")
+        # 6 founders * 5 reviewers (6 - self) * 1 round = 30
+        expected = 6 * (6 - 1) * 1
+        assert len(all_reviews) == expected, (
+            f"Expected {expected} advisor reviews (6 founders * 5 advisors * 1 round), "
+            f"got {len(all_reviews)}"
+        )
+
+    def test_dyn05_one_founder_still_passes(self, tmp_path, monkeypatch):
+        """DYN-05: Confirm 1-founder config still works after Phase 6 changes.
+
+        Mirrors TestRoleAssignment.test_pipeline_with_single_founder to ensure
+        Plan 01 changes (mock_providers param) did not break the 1-founder path.
+        """
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            roles_config={
+                "founders": ["anthropic"],
+                "advisors": ["openai", "deepseek", "gemini"],
+                "investors": ["openai", "deepseek", "gemini"],
+            },
+        )
+        assert run_dir.exists()
+        plans = _read_jsonl(run_dir / "stage2_final_plans.jsonl")
+        assert len(plans) == 1, f"Expected 1 final plan for 1 founder, got {len(plans)}"
+        decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
+        assert len(decisions) == 3, f"Expected 3 investor decisions (1 founder * 3 investors), got {len(decisions)}"
