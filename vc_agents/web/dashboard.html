@@ -533,6 +533,323 @@
 </div>
 
 <script>
+/* ════════════════════════════════════════════════════
+   TEAM BUILDER — slot data and UI logic
+════════════════════════════════════════════════════ */
+const SLOTS = [
+  {
+    label: 'Slot 1', type: 'OpenAI Responses API',
+    color: 'var(--c-openai)', keyField: 'keyOpenai',
+    configKey: 'openai',   // maps to models.openai in RunConfig
+    fixed: true, defaultModel: 'gpt-4o',
+    providers: [
+      {
+        name: 'OpenAI', color: 'var(--c-openai)',
+        baseUrl: 'https://api.openai.com/v1',
+        models: [
+          { id:'gpt-4o',           name:'GPT-4o',         price:'$2.50/$10',   ctx:'128K', tier:'flagship', desc:'Best general-purpose model. Strong reasoning and code.' },
+          { id:'gpt-4o-mini',      name:'GPT-4o Mini',    price:'$0.15/$0.60', ctx:'128K', tier:'fast',     desc:'Fast and cheap. Best value for high-volume tasks.' },
+          { id:'o3-mini',          name:'o3-mini',         price:'$1.10/$4.4',  ctx:'200K', tier:'flagship', desc:'Efficient chain-of-thought reasoning.' },
+          { id:'gpt-4.1',          name:'GPT-4.1',         price:'$2.00/$8',    ctx:'1M',   tier:'fast',     desc:'1M context. Strong for long-document work.' },
+          { id:'gpt-4.1-mini',     name:'GPT-4.1 mini',   price:'$0.40/$1.60', ctx:'1M',   tier:'fast',     desc:'Cost-efficient with massive context.' },
+        ]
+      }
+    ]
+  },
+  {
+    label: 'Slot 2', type: 'Anthropic Messages API',
+    color: 'var(--c-anthropic)', keyField: 'keyAnthropic',
+    configKey: 'anthropic', fixed: true,
+    defaultModel: 'claude-3-5-haiku-20241022',
+    providers: [
+      {
+        name: 'Anthropic', color: 'var(--c-anthropic)',
+        baseUrl: 'https://api.anthropic.com/v1',
+        models: [
+          { id:'claude-opus-4-6',   name:'Claude Opus 4.6',   price:'$5/$25',    ctx:'200K', tier:'flagship', desc:'Best instruction-following. Top choice for investor/advisor roles.' },
+          { id:'claude-sonnet-4-6', name:'Claude Sonnet 4.6', price:'$3/$15',    ctx:'200K', tier:'flagship', desc:'Best capability-cost ratio in the Claude family.' },
+          { id:'claude-sonnet-4-5', name:'Claude Sonnet 4.5', price:'$3/$15',    ctx:'200K', tier:'flagship', desc:'Optimised for agentic and iterative work.' },
+          { id:'claude-3-5-haiku-20241022', name:'Claude Haiku 3.5', price:'$0.80/$4', ctx:'200K', tier:'fast', desc:'Near-frontier quality at lower cost. Fastest Claude.' },
+        ]
+      }
+    ]
+  },
+  {
+    label: 'Slot 3', type: 'OpenAI-Compatible API',
+    color: 'var(--c-compat)', keyField: 'keyDeepseek',
+    configKey: 'deepseek',  // maps to models.deepseek in RunConfig
+    fixed: false, defaultModel: 'deepseek-chat',
+    defaultProvider: 'DeepSeek',
+    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    providers: [
+      {
+        name: 'DeepSeek', color: 'var(--c-deepseek)',
+        baseUrl: 'https://api.deepseek.com/v1',
+        models: [
+          { id:'deepseek-reasoner', name:'DeepSeek Reasoner', price:'$0.55/$2.19', ctx:'64K', tier:'flagship', desc:'Chain-of-thought before JSON. Great for multi-step analysis.' },
+          { id:'deepseek-chat',     name:'DeepSeek Chat',     price:'$0.27/$1.10', ctx:'64K', tier:'fast',     desc:'Lightest DeepSeek model. High-volume feedback tasks.' },
+        ]
+      },
+      {
+        name: 'Mistral', color: 'var(--c-mistral)',
+        baseUrl: 'https://api.mistral.ai/v1',
+        models: [
+          { id:'mistral-large-latest',  name:'Mistral Large',  price:'$2/$6',       ctx:'128K', tier:'flagship', desc:'Strong European reasoning. Excellent structured output.' },
+          { id:'mistral-medium-latest', name:'Mistral Medium', price:'$0.40/$2',    ctx:'128K', tier:'fast',     desc:'Balanced quality and cost for advisor roles.' },
+          { id:'mistral-small-latest',  name:'Mistral Small',  price:'$0.10/$0.30', ctx:'128K', tier:'cheap',   desc:'Highly cost-efficient. Reliable JSON output.' },
+        ]
+      },
+      {
+        name: 'xAI', color: 'var(--c-xai)',
+        baseUrl: 'https://api.x.ai/v1',
+        models: [
+          { id:'grok-3',      name:'Grok 3',      price:'$3/$15',    ctx:'131K', tier:'flagship', desc:'Real-world reasoning with live knowledge integration.' },
+          { id:'grok-3-mini', name:'Grok 3 Mini', price:'$0.30/$0.50', ctx:'131K', tier:'fast', desc:'Cost-efficient Grok for advisor and feedback roles.' },
+        ]
+      },
+      {
+        name: 'Meta', color: 'var(--c-meta)',
+        baseUrl: 'https://api.together.xyz/v1',
+        models: [
+          { id:'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', name:'Llama 4 Maverick', price:'$0.27/$0.85', ctx:'1M',  tier:'flagship', desc:'Open-weights via Together AI. Competitive with mid-tier closed models.' },
+          { id:'meta-llama/Llama-3.3-70B-Instruct-Turbo',           name:'Llama 3.3 70B',    price:'$0.90/$0.90', ctx:'128K',tier:'fast',     desc:'Proven and widely deployed. Reliable JSON output.' },
+        ]
+      },
+      {
+        name: 'Cohere', color: 'var(--c-cohere)',
+        baseUrl: 'https://api.cohere.ai/compatibility/v1',
+        models: [
+          { id:'command-a-03-2025',   name:'Command A',  price:'$2.77/$13.72', ctx:'256K', tier:'flagship', desc:'Cohere flagship for agentic tasks and RAG.' },
+          { id:'command-r-08-2024',   name:'Command R',  price:'$0.15/$0.60',  ctx:'128K', tier:'cheap',    desc:'Budget option for structured retrieval tasks.' },
+        ]
+      },
+      {
+        name: 'Qwen', color: 'var(--c-qwen)',
+        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        models: [
+          { id:'Qwen/Qwen3-235B-A22B', name:'Qwen3 235B', price:'$0 (preview)', ctx:'131K', tier:'flagship', desc:'235B parameter model. Competitive reasoning.' },
+          { id:'Qwen/Qwen3-72B',       name:'Qwen3 72B',  price:'~$0.90/$0.90', ctx:'131K', tier:'fast',    desc:'Strong mid-size open model.' },
+        ]
+      },
+    ]
+  },
+  {
+    label: 'Slot 4', type: 'OpenAI-Compatible API',
+    color: 'var(--c-compat)', keyField: 'keyGemini',
+    configKey: 'gemini',    // maps to models.gemini in RunConfig
+    fixed: false, defaultModel: 'gemini-2.0-flash',
+    defaultProvider: 'Google',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    providers: null,        // shares Slot 3's provider list (set after SLOTS definition)
+  },
+];
+/* Slot 4 reuses Slot 3's provider list */
+SLOTS[3].providers = SLOTS[2].providers;
+
+/* ─── State ─── */
+const teamState = {
+  selectedSlot: 0,
+  models:    {},   // slotIndex -> modelId
+  providers: {},   // slotIndex -> providerName (compat slots only)
+  baseUrls:  {},   // slotIndex -> baseUrl (compat slots only)
+};
+SLOTS.forEach((slot, i) => {
+  teamState.models[i] = slot.defaultModel;
+  if (!slot.fixed) {
+    teamState.providers[i] = slot.defaultProvider;
+    teamState.baseUrls[i]  = slot.defaultBaseUrl;
+  }
+});
+
+/* ─── Build UI ─── */
+function buildTeamUI() {
+  buildSlotStrip();
+  buildPickerPanels();
+  updateTeamSummary();
+  activateSlot(0);
+}
+
+function buildSlotStrip() {
+  const strip = document.getElementById('slotStrip');
+  if (!strip) return;
+  SLOTS.forEach((slot, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'slot-btn';
+    btn.dataset.slot = i;
+    btn.style.color = slot.color;
+    btn.onclick = () => activateSlot(i);
+    btn.innerHTML =
+      '<div class="slot-label"><span class="slot-dot"></span>' + slot.label + '</div>' +
+      '<div class="slot-type-line">' + slot.type + '</div>' +
+      '<div class="slot-selected-name" id="slot-name-' + i + '">—</div>' +
+      '<div class="slot-selected-price" id="slot-price-' + i + '"></div>';
+    strip.appendChild(btn);
+  });
+}
+
+function buildPickerPanels() {
+  const container = document.getElementById('pickerPanels');
+  if (!container) return;
+  SLOTS.forEach((slot, si) => {
+    const panel = document.createElement('div');
+    panel.className = 'picker-panel';
+    panel.id = 'picker-' + si;
+    panel.style.color = slot.color;
+
+    if (!slot.fixed) {
+      const provSel = document.createElement('div');
+      provSel.className = 'provider-selector';
+      provSel.id = 'prov-sel-' + si;
+      slot.providers.forEach(prov => {
+        const tab = document.createElement('div');
+        tab.className = 'prov-tab';
+        tab.dataset.prov = prov.name;
+        tab.style.color = prov.color;
+        tab.onclick = () => switchProvider(si, prov.name);
+        tab.innerHTML = '<span class="pd" style="background:' + prov.color + '"></span>' + prov.name;
+        provSel.appendChild(tab);
+      });
+      panel.appendChild(provSel);
+    }
+
+    const scroll = document.createElement('div');
+    scroll.className = 'model-scroll';
+    scroll.id = 'model-list-' + si;
+    panel.appendChild(scroll);
+
+    if (!slot.fixed) {
+      const urlRow = document.createElement('div');
+      urlRow.className = 'base-url-row';
+      urlRow.innerHTML =
+        '<label>Base URL</label>' +
+        '<input type="text" id="baseurl-' + si + '" value="' + (slot.defaultBaseUrl || '') + '" placeholder="https://api.provider.com/v1">';
+      panel.appendChild(urlRow);
+      urlRow.querySelector('input').addEventListener('input', function(e) {
+        teamState.baseUrls[si] = e.target.value;
+      });
+    }
+
+    container.appendChild(panel);
+  });
+
+  SLOTS.forEach((slot, si) => {
+    const prov = slot.fixed
+      ? slot.providers[0]
+      : slot.providers.find(p => p.name === teamState.providers[si]);
+    renderModelList(si, prov);
+    if (!slot.fixed) activateProviderTab(si, teamState.providers[si]);
+  });
+}
+
+function renderModelList(si, prov) {
+  const list = document.getElementById('model-list-' + si);
+  if (!list || !prov) return;
+  const slot = SLOTS[si];
+  list.innerHTML = '';
+  prov.models.forEach(m => {
+    const isSelected = teamState.models[si] === m.id;
+    const row = document.createElement('label');
+    row.className = 'model-row' + (isSelected ? ' selected' : '');
+    row.style.color = slot.color;
+    row.dataset.id = m.id;
+    const tierTag = m.tier === 'flagship'
+      ? '<span class="mtag tier-flagship">flagship</span>'
+      : m.tier === 'fast'
+        ? '<span class="mtag tier-fast">efficient</span>'
+        : '<span class="mtag tier-cheap">budget</span>';
+    row.innerHTML =
+      '<input type="radio" name="m-' + si + '" value="' + m.id + '"' + (isSelected ? ' checked' : '') + '>' +
+      '<div class="model-radio-dot"></div>' +
+      '<div class="model-info">' +
+        '<div class="model-name">' + m.name + '</div>' +
+        '<div class="model-tagrow">' +
+          '<span class="mtag price">' + m.price + '</span>' +
+          '<span class="mtag ctx">' + m.ctx + ' ctx</span>' +
+          tierTag +
+        '</div>' +
+        '<div class="model-desc">' + m.desc + '</div>' +
+      '</div>';
+    row.onclick = () => selectModel(si, m.id, prov);
+    list.appendChild(row);
+  });
+  updateSlotHeader(si);
+}
+
+function selectModel(si, modelId) {
+  teamState.models[si] = modelId;
+  document.querySelectorAll('#model-list-' + si + ' .model-row').forEach(row => {
+    const sel = row.dataset.id === modelId;
+    row.classList.toggle('selected', sel);
+    const radio = row.querySelector('input');
+    if (radio) radio.checked = sel;
+  });
+  updateSlotHeader(si);
+  updateTeamSummary();
+}
+
+function switchProvider(si, provName) {
+  teamState.providers[si] = provName;
+  const prov = SLOTS[si].providers.find(p => p.name === provName);
+  if (!prov) return;
+  const urlInput = document.getElementById('baseurl-' + si);
+  if (urlInput) { urlInput.value = prov.baseUrl; teamState.baseUrls[si] = prov.baseUrl; }
+  if (!prov.models.find(m => m.id === teamState.models[si])) {
+    teamState.models[si] = prov.models[0].id;
+  }
+  activateProviderTab(si, provName);
+  renderModelList(si, prov);
+}
+
+function activateProviderTab(si, provName) {
+  const sel = document.getElementById('prov-sel-' + si);
+  if (!sel) return;
+  sel.querySelectorAll('.prov-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.prov === provName);
+  });
+}
+
+function activateSlot(si) {
+  teamState.selectedSlot = si;
+  document.querySelectorAll('.slot-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.slot) === si);
+  });
+  document.querySelectorAll('.picker-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'picker-' + si);
+  });
+}
+
+function updateSlotHeader(si) {
+  const slot = SLOTS[si];
+  const prov = slot.fixed
+    ? slot.providers[0]
+    : slot.providers.find(p => p.name === teamState.providers[si]);
+  const model = prov && prov.models.find(m => m.id === teamState.models[si]);
+  const nameEl  = document.getElementById('slot-name-' + si);
+  const priceEl = document.getElementById('slot-price-' + si);
+  if (nameEl)  nameEl.textContent  = model ? model.name  : '—';
+  if (priceEl) priceEl.textContent = model ? model.price : '';
+}
+
+function updateTeamSummary() {
+  const summary = document.getElementById('teamSummary');
+  if (!summary) return;
+  const chips = SLOTS.map((slot, si) => {
+    const prov = slot.fixed
+      ? slot.providers[0]
+      : slot.providers.find(p => p.name === teamState.providers[si]);
+    const model = prov && prov.models.find(m => m.id === teamState.models[si]);
+    const provLabel = (!slot.fixed && teamState.providers[si])
+      ? teamState.providers[si] + ' · '
+      : '';
+    return '<div class="team-chip">' +
+      '<div class="team-chip-dot" style="background:' + slot.color + '"></div>' +
+      '<span style="color:var(--muted);margin-right:2px">' + slot.label + ':</span>' +
+      provLabel + (model ? model.name : '—') +
+      '</div>';
+  });
+  summary.innerHTML = chips.join('');
+}
+
 let ws = null;
 let currentRunId = null;
 
@@ -626,10 +943,14 @@ async function startRun() {
     concurrency: 1,
     retry_max: 3,
     models: {
-      openai: document.getElementById('modelOpenai').value,
-      anthropic: document.getElementById('modelAnthropic').value,
-      deepseek: document.getElementById('modelDeepseek').value,
-      gemini: document.getElementById('modelGemini').value,
+      openai:    teamState.models[0],    // Slot 1 — locked OpenAI
+      anthropic: teamState.models[1],    // Slot 2 — locked Anthropic
+      deepseek:  teamState.models[2],    // Slot 3 — compat (configKey=deepseek)
+      gemini:    teamState.models[3],    // Slot 4 — compat (configKey=gemini)
+    },
+    base_urls: {
+      slot3: teamState.baseUrls[2] || '',  // server reads slot3 key first
+      slot4: teamState.baseUrls[3] || '',  // server reads slot4 key first
     },
   };
 
@@ -824,6 +1145,8 @@ document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini')
 connectWS();
 loadRuns();
 loadCatalog();
+// Initialise team builder after DOM is ready
+buildTeamUI();
 
 // -- Model Catalog --
 let _catalogData = [];
@@ -895,10 +1218,10 @@ function renderCatalog() {
 // -- Cost Estimator --
 async function runEstimate() {
   const modelIds = [
-    document.getElementById('modelOpenai').value,
-    document.getElementById('modelAnthropic').value,
-    document.getElementById('modelDeepseek').value,
-    document.getElementById('modelGemini').value,
+    teamState.models[0],
+    teamState.models[1],
+    teamState.models[2],
+    teamState.models[3],
   ];
   try {
     const resp = await fetch('/api/estimate', {
