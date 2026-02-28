@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-28T23:15:00.000Z"
+last_updated: "2026-02-28T23:30:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
+  completed_phases: 8
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** The pipeline must complete a full run reliably and produce a ranked portfolio report that reflects genuine multi-model deliberation.
-**Current focus:** Phase 8 — Native JSON Mode
+**Current focus:** Phase 9 — Live Cost Tracking
 
 ## Current Position
 
-Phase: 8 of 9 (Native JSON Mode)
+Phase: 9 of 9 (Live Cost Tracking)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-02-28 — Phase 7 Rich Real-time UX complete (3/3 plans, 75/75 tests)
+Last activity: 2026-02-28 — Phase 8 Native JSON Mode complete (1/1 plans, 80/80 tests)
 
-Progress: [███████░░░] 78%
+Progress: [████████░░] 89%
 
 ## Performance Metrics
 
@@ -84,6 +84,8 @@ Recent decisions affecting current work:
 - Phase 7: deduplication in handleStage1Ideas via CSS.escape(data-idea-id) prevents double-render on loadResults
 - Phase 7: live plan/pitch cards are stubs — loadResults() re-renders from full data on pipeline_complete, overwriting stubs
 - Phase 7: markStepDone no-ops if no matching _liveSteps key (handles step_complete before any step_start)
+- Phase 8: effective_retries=1 computed inside retry_json_call for native providers — no call-site changes needed
+- Phase 8: supports_native_json defaults False so all future providers opt-in explicitly by setting flag after super().__init__()
 
 ### Pending Todos
 
@@ -96,5 +98,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 7 complete — 3/3 plans executed, 75/75 tests pass, ROADMAP updated
+Stopped at: Phase 8 complete — 1/1 plans executed, 80/80 tests pass, ROADMAP updated
 Resume file: None

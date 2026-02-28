@@ -17,7 +17,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs (2026-02-28)
 - [x] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors (2026-02-28)
 - [x] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators (2026-02-28)
-- [ ] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers
+- [x] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers (2026-02-28)
 - [ ] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json`
 
 ## Phase Details
@@ -143,7 +143,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — Add supports_native_json to ProviderConfig, update retry_json_call, flag both OpenAI providers, add TestNativeJsonMode tests (JSON-01, JSON-02, JSON-03, JSON-04)
+- [x] 08-01-PLAN.md — Add supports_native_json to ProviderConfig, update retry_json_call, flag both OpenAI providers, add TestNativeJsonMode tests (JSON-01, JSON-02, JSON-03, JSON-04)
 
 ### Phase 9: Live Cost Tracking
 **Goal**: Every API call's cost is calculated and accumulated in real time; operators can cap spend with `--budget` and get a final cost breakdown file
@@ -170,5 +170,5 @@ Plans:
 | 5. New Dashboard | 2/2 | Complete | 2026-02-28 |
 | 6. Dynamic Provider Count | 2/2 | Complete | 2026-02-28 |
 | 7. Rich Real-time UX | 3/3 | Complete | 2026-02-28 |
-| 8. Native JSON Mode | 0/1 | Not started | - |
+| 8. Native JSON Mode | 1/1 | Complete | 2026-02-28 |
 | 9. Live Cost Tracking | 0/TBD | Not started | - |
