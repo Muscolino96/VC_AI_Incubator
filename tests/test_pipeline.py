@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from vc_agents.pipeline.run import run_pipeline
+from vc_agents.pipeline.run import run_pipeline, _load_founder_plan_from_disk
 from vc_agents.pipeline.run import run_preflight, PreflightError
 from vc_agents.providers.base import BaseProvider, ProviderError
 from vc_agents.providers.mock import MockProvider
@@ -510,3 +510,143 @@ class TestPreflight:
             f"Parallel pre-flight took {ratio:.1%} of sequential time — expected <60%. "
             f"parallel={parallel_time:.3f}s, sequential={sequential_time:.3f}s"
         )
+
+
+# ---------------------------------------------------------------------------
+# Resume Fix Tests
+# ---------------------------------------------------------------------------
+
+
+class TestResume:
+    """RES-01 through RES-04: per-founder Stage 2 checkpointing and resume."""
+
+    _ALL_FOUNDERS = {"openai", "anthropic", "deepseek", "gemini"}
+
+    def _run_full(self, tmp_path: Path, monkeypatch) -> Path:
+        """Run a complete mock pipeline and return the run_dir."""
+        monkeypatch.chdir(tmp_path)
+        return run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+        )
+
+    def test_founder_checkpoint_written_after_each_founder(
+        self, tmp_path, monkeypatch
+    ):
+        """RES-01: after a full run, checkpoint.json lists all 4 founders in stage2_founders_done."""
+        run_dir = self._run_full(tmp_path, monkeypatch)
+
+        checkpoint_path = run_dir / "checkpoint.json"
+        assert checkpoint_path.exists(), "checkpoint.json must exist after a full run"
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+
+        assert "stage2_founders_done" in checkpoint, (
+            "checkpoint.json must contain stage2_founders_done after Stage 2 completes"
+        )
+        assert set(checkpoint["stage2_founders_done"]) == self._ALL_FOUNDERS, (
+            f"Expected all 4 founders in stage2_founders_done, got: "
+            f"{checkpoint['stage2_founders_done']}"
+        )
+
+    def test_resume_skips_completed_founders_no_extra_calls(
+        self, tmp_path, monkeypatch
+    ):
+        """RES-02: resuming with 2 founders done makes zero Stage 2 API calls for those founders.
+
+        We verify this by patching run_stage2's founders_override: when the partial resume
+        runs, run_stage2 receives only deepseek and gemini (the remaining founders).
+        We capture the founders_override argument to confirm openai/anthropic are excluded.
+        """
+        import vc_agents.pipeline.run as run_module
+
+        run_dir = self._run_full(tmp_path, monkeypatch)
+
+        # Simulate a mid-Stage-2 crash: 2 founders done, stage2 not complete
+        checkpoint_path = run_dir / "checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        checkpoint["stage2_founders_done"] = ["openai", "anthropic"]
+        checkpoint.pop("stage2_complete", None)
+        # Keep stage3_complete removed too so we can test Stage 2 path specifically
+        checkpoint.pop("stage3_complete", None)
+        checkpoint_path.write_text(json.dumps(checkpoint, indent=2), encoding="utf-8")
+
+        # Patch run_stage2 to capture the founders_override argument
+        captured_founders_override: list = []
+        original_run_stage2 = run_module.run_stage2
+
+        def capturing_run_stage2(*args, founders_override=None, **kwargs):
+            if founders_override is not None:
+                captured_founders_override.extend(
+                    [f.name for f in founders_override]
+                )
+            return original_run_stage2(*args, founders_override=founders_override, **kwargs)
+
+        monkeypatch.setattr(run_module, "run_stage2", capturing_run_stage2)
+
+        # Resume the run
+        resumed_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=1,
+            max_iterations=1,
+            ideas_per_provider=2,
+            resume_dir=run_dir,
+        )
+        assert resumed_dir == run_dir
+
+        # run_stage2 should have been called with only deepseek and gemini
+        assert len(captured_founders_override) == 2, (
+            f"Expected run_stage2 called with 2 remaining founders, "
+            f"got: {captured_founders_override}"
+        )
+        assert set(captured_founders_override) == {"deepseek", "gemini"}, (
+            f"Expected only deepseek and gemini in founders_override, "
+            f"got: {captured_founders_override}"
+        )
+        assert "openai" not in captured_founders_override, (
+            "openai should be excluded from run_stage2 when already in stage2_founders_done"
+        )
+        assert "anthropic" not in captured_founders_override, (
+            "anthropic should be excluded from run_stage2 when already in stage2_founders_done"
+        )
+
+    def test_resume_loads_plan_from_disk_with_correct_structure(
+        self, tmp_path, monkeypatch
+    ):
+        """RES-03 + RES-04: _load_founder_plan_from_disk returns a plan with the expected keys."""
+        run_dir = self._run_full(tmp_path, monkeypatch)
+
+        # Verify the plan file exists on disk from the full run
+        assert (run_dir / "stage2_openai_plan_v0.jsonl").exists(), (
+            "stage2_openai_plan_v0.jsonl must be written during a full run"
+        )
+
+        plan = _load_founder_plan_from_disk("openai", run_dir)
+
+        assert "founder_provider" in plan, "Plan must have 'founder_provider' key"
+        assert plan["founder_provider"] == "openai", (
+            f"Expected founder_provider='openai', got {plan['founder_provider']!r}"
+        )
+        assert "idea_id" in plan, "Plan must have 'idea_id' key"
+
+    def test_resume_selects_highest_version_plan(self, tmp_path):
+        """RES-03: when multiple versioned plan files exist, the highest version wins."""
+        # Create two fake plan files in tmp_path
+        v0_record = {"founder_provider": "openai", "version": 0, "idea_id": "idea-v0"}
+        v1_record = {"founder_provider": "openai", "version": 1, "idea_id": "idea-v1"}
+
+        (tmp_path / "stage2_openai_plan_v0.jsonl").write_text(
+            json.dumps(v0_record) + "\n", encoding="utf-8"
+        )
+        (tmp_path / "stage2_openai_plan_v1.jsonl").write_text(
+            json.dumps(v1_record) + "\n", encoding="utf-8"
+        )
+
+        result = _load_founder_plan_from_disk("openai", tmp_path)
+        assert result["version"] == 1, (
+            f"Expected version=1 (highest), got version={result.get('version')}"
+        )
+        assert result["idea_id"] == "idea-v1"

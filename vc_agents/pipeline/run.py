@@ -1023,13 +1023,26 @@ def run_pipeline(
                     message="Build and Iterate complete",
                 ))
 
-            _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True})
+            # Preserve stage2_founders_done list from the current checkpoint so it
+            # remains in future checkpoint reads (we merge rather than overwrite).
+            existing_cp = _load_checkpoint(run_dir) or {}
+            _save_checkpoint(run_dir, {
+                **existing_cp,
+                "stage1_complete": True,
+                "stage2_complete": True,
+            })
 
         # Stage 3: Seed Pitch
         report = run_stage3(
             providers, final_plans, retry_max, concurrency, run_dir, emit=emit, roles=roles,
         )
-        _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True, "stage3_complete": True})
+        existing_cp = _load_checkpoint(run_dir) or {}
+        _save_checkpoint(run_dir, {
+            **existing_cp,
+            "stage1_complete": True,
+            "stage2_complete": True,
+            "stage3_complete": True,
+        })
 
         # Print portfolio summary
         logger.info("\n=== PORTFOLIO SUMMARY ===")
