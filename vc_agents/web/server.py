@@ -20,11 +20,26 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 
 from vc_agents.logging_config import setup_logging
 from vc_agents.pipeline.cost_estimator import estimate_cost, load_catalog
 from vc_agents.pipeline.events import EventCallback, PipelineEvent
 from vc_agents.pipeline.run import _load_jsonl, run_pipeline
+
+
+class RunConfig(BaseModel):
+    use_mock: bool = True
+    max_iterations: int = 3
+    ideas_per_provider: int = 5
+    sector_focus: str = ""
+    concurrency: int = 1
+    retry_max: int = 3
+    deliberation_enabled: bool = False
+    models: dict[str, str] = {}
+    base_urls: dict[str, str] = {}
+    api_keys: dict[str, str] = {}
+
 
 load_dotenv()
 
@@ -129,16 +144,15 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
 
 
 @app.post("/api/runs")
-async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
+async def create_run(config: RunConfig = RunConfig()) -> JSONResponse:
     """Launch a new pipeline run."""
-    config = config or {}
     run_id = f"run_{uuid.uuid4().hex[:12]}"
 
     with _runs_lock:
         _runs[run_id] = {
             "run_id": run_id,
             "status": "starting",
-            "config": config,
+            "config": config.model_dump(),
             "events": [],
             "last_event": None,
             "run_dir": None,
@@ -149,7 +163,7 @@ async def create_run(config: dict[str, Any] | None = None) -> JSONResponse:
 
     loop = asyncio.get_running_loop()
     thread = threading.Thread(
-        target=_run_in_thread, args=(run_id, config, loop), daemon=True,
+        target=_run_in_thread, args=(run_id, config.model_dump(), loop), daemon=True,
     )
     thread.start()
 
