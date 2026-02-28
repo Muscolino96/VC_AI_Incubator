@@ -262,6 +262,11 @@ async def get_results(run_id: str) -> JSONResponse:
             reader = csv.DictReader(csvf)
             results["portfolio_report"] = list(reader)
 
+    # Read token usage if it exists
+    token_usage_path = run_dir / "token_usage.json"
+    if token_usage_path.exists():
+        results["token_usage"] = json.loads(token_usage_path.read_text(encoding="utf-8"))
+
     return JSONResponse(results)
 
 

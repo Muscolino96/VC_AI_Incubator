@@ -7,210 +7,186 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    /* ── Design tokens (Phase 2) ── */
-    --gold: #d4a853;
-    --gold-dim: rgba(212,168,83,.13);
-    --gold-glow: rgba(212,168,83,.35);
-    --ink: #0c0d10;
-    --ink-2: #141519;
-    --border-hi: rgba(255,255,255,.14);
-    --text-dim: #8a8c96;
-    --text-xs: #5a5c68;
+/* ─────────────────────────── TOKENS ─────────────────────────── */
+:root {
+  --ink: #0c0d10;
+  --ink-2: #141519;
+  --surface: #1a1b20;
+  --surface-2: #20222a;
+  --border: rgba(255,255,255,.07);
+  --border-hi: rgba(255,255,255,.14);
+  --text: #e8e9ec;
+  --text-dim: #8a8c96;
+  --text-xs: #5a5c68;
 
-    /* Provider colour tokens */
-    --c-openai: #10b981;
-    --c-anthropic: #cc785c;
-    --c-compat: #6d7aff;
-    --c-mistral: #ff7000;
-    --c-google: #8b5cf6;
-    --c-deepseek: #3b82f6;
-    --c-xai: #e2e2e2;
-    --c-meta: #0082fb;
-    --c-cohere: #39d353;
-    --c-qwen: #ed6c18;
+  --gold: #d4a853;
+  --gold-dim: rgba(212,168,83,.13);
+  --gold-glow: rgba(212,168,83,.35);
 
-    /* Font tokens */
-    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-serif: 'DM Serif Display', serif;
+  /* slot / provider colours */
+  --c-openai: #10b981;
+  --c-anthropic: #cc785c;
+  --c-compat: #6d7aff;  /* for both generic compat slots */
+  --c-mistral: #ff7000;
+  --c-google: #8b5cf6;
+  --c-deepseek: #3b82f6;
+  --c-xai: #e2e2e2;
+  --c-meta: #0082fb;
+  --c-cohere: #39d353;
+  --c-qwen: #ed6c18;
 
-    --bg: #0f1117; --surface: #1a1d27; --surface2: #22253a; --border: #2a2d3a;
-    --text: #e4e4e7; --muted: #8b8d97; --accent: #6366f1;
-    --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: var(--font-sans); background: var(--bg); color: var(--text); line-height: 1.5; }
-  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
 
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-  header h1 { font-size: 24px; font-weight: 700; }
-  header h1 span { color: var(--accent); }
-  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .status-dot.connected { background: var(--green); }
-  .status-dot.disconnected { background: var(--red); }
-
-  /* Control Panel */
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-  .panel h2 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  .panel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .panel-section { background: var(--surface2); border-radius: 8px; padding: 16px; }
-  .panel-section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; font-weight: 600; }
-
-  .field { margin-bottom: 12px; }
-  .field:last-child { margin-bottom: 0; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
-  .field input, .field select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 14px; transition: border-color .15s; }
-  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
-  .field input[type="password"] { font-family: monospace; letter-spacing: 1px; }
-  .field .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .field-row { display: flex; gap: 12px; }
-  .field-row .field { flex: 1; }
-
-  .actions { display: flex; gap: 12px; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
-  button { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all .15s; }
-  button:hover { opacity: .85; transform: translateY(-1px); }
-  button:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-  button.secondary { background: var(--surface2); border: 1px solid var(--border); font-weight: 500; }
-  button.lg { padding: 12px 32px; font-size: 16px; }
-  .run-status { font-size: 13px; color: var(--muted); }
-
-  /* Tabs */
-  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-  .tab { padding: 10px 20px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; transition: all .15s; }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* Progress */
-  .progress-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; display: none; }
-  .progress-bar { background: var(--bg); border-radius: 8px; overflow: hidden; height: 6px; margin: 12px 0; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); transition: width .3s; border-radius: 8px; }
-  .stage-badges { display: flex; gap: 8px; margin-bottom: 12px; }
-  .stage-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); }
-  .stage-badge.active { background: var(--accent); border-color: var(--accent); color: white; animation: pulse 2s infinite; }
-  .stage-badge.complete { background: rgba(34,197,94,.15); border-color: var(--green); color: var(--green); }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
-
-  .event-log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 250px; overflow-y: auto; padding: 12px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
-  .event { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
-  .event:last-child { border-bottom: none; }
-  .event .ts { color: var(--muted); margin-right: 8px; }
-  .event .type { color: var(--accent); margin-right: 8px; font-weight: 500; }
-
-  /* Cards */
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: border-color .15s; }
-  .card:hover { border-color: var(--accent); }
-  .card h3 { font-size: 16px; margin-bottom: 8px; }
-  .card .provider { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-  .card p { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 4px; }
-  .tag.invest { background: rgba(34,197,94,.15); color: var(--green); }
-  .tag.pass { background: rgba(239,68,68,.15); color: var(--red); }
-
-  /* Table */
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
-  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
-  tr:hover td { background: rgba(99,102,241,.05); }
-
-  details { margin-bottom: 12px; }
-  summary { cursor: pointer; padding: 8px 0; font-weight: 500; }
-  summary:hover { color: var(--accent); }
-  details .content { padding: 16px; background: var(--surface); border-radius: 8px; margin-top: 8px; font-size: 13px; line-height: 1.6; }
-  details .content h4 { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
-  details .content h4:first-child { margin-top: 0; }
-
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .empty h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
-
-  .key-warning { background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--yellow); margin-top: 8px; }
-  .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-right: 6px; }
-  .tier-frontier   { background: rgba(99,102,241,.2);  color: var(--accent); border: 1px solid rgba(99,102,241,.4); }
-  .tier-strong     { background: rgba(59,130,246,.2);  color: var(--blue);   border: 1px solid rgba(59,130,246,.4); }
-  .tier-efficient  { background: rgba(234,179,8,.18);  color: var(--yellow); border: 1px solid rgba(234,179,8,.4); }
-  .tier-budget     { background: rgba(34,197,94,.2);   color: var(--green);  border: 1px solid rgba(34,197,94,.4); }
-  .tier-open-source{ background: rgba(139,92,246,.18); color: #a78bfa;       border: 1px solid rgba(139,92,246,.4); }
-  .tier-standard   { background: rgba(59,130,246,.2);  color: var(--blue);   border: 1px solid rgba(59,130,246,.4); }
-  .tier-local      { background: rgba(139,141,151,.2); color: var(--muted);  border: 1px solid rgba(139,141,151,.4); }
-  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
-  .catalog-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: border-color .15s; }
-  .catalog-card:hover { border-color: var(--accent); }
-  .catalog-card .model-id { font-family: monospace; font-size: 13px; color: var(--accent); margin-bottom: 4px; }
-  .catalog-card .provider-name { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
-  .catalog-card .pricing { display: flex; gap: 16px; margin: 10px 0; padding: 8px 12px; background: var(--bg); border-radius: 6px; font-size: 12px; }
-  .catalog-card .price-item { display: flex; flex-direction: column; gap: 2px; }
-  .catalog-card .price-label { color: var(--muted); font-size: 10px; text-transform: uppercase; }
-  .catalog-card .price-val { font-weight: 700; color: var(--text); }
-  .catalog-card ul { margin: 6px 0 0 16px; font-size: 12px; color: var(--muted); }
-  .catalog-card ul li { margin-bottom: 2px; }
-  .role-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin: 2px; background: rgba(99,102,241,.15); color: var(--accent); border: 1px solid rgba(99,102,241,.3); }
-  .estimate-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 16px; }
-  .estimate-box .total { font-size: 28px; font-weight: 800; color: var(--accent); }
-  .estimate-box .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .estimate-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .estimate-row:last-child { border-bottom: none; }
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
-  .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 22px; transition: .2s; }
-  .toggle-slider:before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
-  .toggle input:checked + .toggle-slider { background: var(--accent); }
-  .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
-  .catalog-filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-  .filter-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 500; }
-  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
-
-  /* ── Provider badge: data-prov colour system (STYLE-03) ── */
-  /* Default / fallback: compat purple */
-  .provider-badge,
-  .eprov { color: var(--c-compat); }
-  [data-prov="openai"]    { color: var(--c-openai); }
-  [data-prov="anthropic"] { color: var(--c-anthropic); }
-  [data-prov="deepseek"]  { color: var(--c-deepseek); }
-  [data-prov="gemini"],
-  [data-prov="google"]    { color: var(--c-google); }
-  [data-prov="mistral"]   { color: var(--c-mistral); }
-  [data-prov="xai"]       { color: var(--c-xai); }
-  [data-prov="meta"]      { color: var(--c-meta); }
-  [data-prov="cohere"]    { color: var(--c-cohere); }
-  [data-prov="qwen"]      { color: var(--c-qwen); }
-
-/* ═══════════════════ TEAM BUILDER ═══════════════════ */
-.team-builder-section {
-  background: var(--surface2);
-  border-radius: 8px;
-  padding: 0;
-  overflow: hidden;
-  grid-column: 1 / -1;  /* spans full panel-grid width */
-  margin-top: 4px;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-serif: 'DM Serif Display', serif;
+  --r: 10px;
+  --r-lg: 16px;
 }
-.team-builder-head {
-  padding: 14px 16px 10px;
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--ink);
+  color: var(--text);
+  line-height: 1.55;
+  font-size: 14px;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+/* ─────────────────────────── LAYOUT ─────────────────────────── */
+.shell { max-width: 1420px; margin: 0 auto; padding: 0 28px 80px; position: relative; z-index: 1; }
+
+/* ─────────────────────────── HEADER ─────────────────────────── */
+header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 22px 0 18px;
   border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
 }
-.team-builder-head h3 {
-  font-size: 13px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 2px;
-  font-weight: 600;
+.wordmark { display: flex; align-items: baseline; gap: 10px; }
+.wordmark-vc { font-family: var(--font-serif); font-size: 27px; color: var(--gold); }
+.wordmark-rest { font-family: var(--font-sans); font-size: 12px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim); }
+.ws-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px;
 }
-.team-builder-head p {
-  font-size: 11px;
-  color: var(--muted);
+.ws-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background .3s; }
+.ws-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ─────────────────────────── SECTION LABEL ─────────────────────────── */
+.section-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
 }
-/* 4-slot selector strip */
+.section-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-hi), transparent); }
+
+/* ─────────────────────────── CARDS ─────────────────────────── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; }
+
+/* ─────────────────────────── FORMS ─────────────────────────── */
+label { display: block; font-size: 11px; font-weight: 500; letter-spacing: .5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px; }
+input, select {
+  width: 100%; background: var(--ink-2); color: var(--text);
+  border: 1px solid var(--border); padding: 8px 11px; border-radius: 8px;
+  font-family: var(--font-sans); font-size: 13px; outline: none; appearance: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-dim); }
+input[type="password"] { font-family: var(--font-mono); letter-spacing: 2px; font-size: 12px; }
+input::placeholder { color: var(--text-xs); }
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8c96' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px;
+}
+select option { background: #1a1b20; }
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-hint { font-size: 11px; color: var(--text-xs); margin-top: 3px; font-style: italic; }
+
+/* ─────────────────────────── BUTTONS ─────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-sans); font-weight: 600; font-size: 13px; padding: 9px 18px;
+  transition: all .15s;
+}
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn-primary {
+  background: var(--gold); color: #0c0d10; font-size: 14px; padding: 11px 26px;
+}
+.btn-primary:not(:disabled):hover { background: #e0b561; box-shadow: 0 4px 20px var(--gold-glow); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface-2, #20222a); color: var(--text-dim); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+.btn svg { width: 14px; height: 14px; stroke-width: 2; fill: none; stroke: currentColor; }
+
+/* ─────────────────────────── CONFIG LAYOUT ─────────────────────────── */
+.config-outer {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.config-left { display: flex; flex-direction: column; gap: 16px; }
+
+/* ─────────────────────────── API NOTICE ─────────────────────────── */
+.api-notice {
+  display: flex; gap: 9px; padding: 11px 13px;
+  background: rgba(212,168,83,.06); border: 1px solid rgba(212,168,83,.2); border-radius: 8px;
+  font-size: 11px; color: #b8956a; line-height: 1.5; margin-top: 10px;
+}
+.api-notice svg { flex-shrink: 0; margin-top: 1px; stroke: var(--gold); fill: none; }
+
+/* ─────────────────────────── LAUNCH BAR ─────────────────────────── */
+.launch-bar { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); margin-top: 2px; }
+.run-status-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+/* ═══════════════════════════════════════════════════════
+   TEAM BUILDER
+═══════════════════════════════════════════════════════ */
+.team-builder {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.team-builder-head {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.team-builder-head h2 { font-family: var(--font-serif); font-size: 19px; font-weight: 400; margin-bottom: 2px; }
+.team-builder-head p { font-size: 12px; color: var(--text-dim); }
+
+/* 4-slot strip at top */
 .slot-strip {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   border-bottom: 1px solid var(--border);
 }
+
 .slot-btn {
-  padding: 10px 12px;
+  padding: 14px 16px;
   cursor: pointer;
   border-right: 1px solid var(--border);
   transition: background .15s;
@@ -221,47 +197,43 @@
 .slot-btn.active { background: rgba(255,255,255,.03); }
 .slot-btn.active::after {
   content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
   background: currentColor;
 }
+
 .slot-label {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-xs); margin-bottom: 5px;
 }
-.slot-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  display: inline-block;
-  margin-right: 4px;
-  vertical-align: middle;
+.slot-type {
+  font-size: 10px; color: var(--text-dim); margin-bottom: 8px;
 }
-.slot-type-line { font-size: 9px; color: var(--muted); margin-bottom: 5px; }
-.slot-selected-name { font-size: 12px; font-weight: 600; }
-.slot-selected-price { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.slot-selected-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.slot-selected-price { font-family: var(--font-mono); font-size: 10px; color: var(--text-xs); margin-top: 2px; }
+
 /* Slot accent colours */
 .slot-btn[data-slot="0"] { color: var(--c-openai); }
 .slot-btn[data-slot="1"] { color: var(--c-anthropic); }
 .slot-btn[data-slot="2"] { color: var(--c-compat); }
 .slot-btn[data-slot="3"] { color: var(--c-compat); }
-/* Picker panel */
+
+/* active dot */
+.slot-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 5px; vertical-align: middle; }
+
+/* ── Model picker panel ── */
 .picker-panel {
+  flex: 1;
   display: none;
   flex-direction: column;
-  min-height: 280px;
-  max-height: 340px;
+  min-height: 0;
   overflow: hidden;
 }
 .picker-panel.active { display: flex; }
-/* Provider selector tabs */
+
+/* Provider selector row (only for compat slots) */
 .provider-selector {
-  display: flex;
+  display: flex; gap: 0;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   scrollbar-width: none;
@@ -269,439 +241,615 @@
 .provider-selector::-webkit-scrollbar { display: none; }
 .prov-tab {
   flex-shrink: 0;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
+  font-size: 11px; font-weight: 600;
+  color: var(--text-xs);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
   transition: all .15s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  display: flex; align-items: center; gap: 5px;
 }
 .prov-tab:hover { color: var(--text); }
 .prov-tab.active { color: var(--text); border-bottom-color: currentColor; }
-.prov-tab .pd {
-  width: 7px; height: 7px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
+.prov-tab .pd { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
 /* Model list */
 .model-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 14px;
+  padding: 14px 18px;
 }
-.model-scroll::-webkit-scrollbar { width: 3px; }
-.model-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.model-scroll::-webkit-scrollbar { width: 4px; }
+.model-scroll::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.model-group-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-xs); padding: 8px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+
 .model-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background .12s;
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 10px 12px; border-radius: 8px;
+  cursor: pointer; transition: background .12s;
   border: 1px solid transparent;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
-.model-row:hover { background: var(--bg); }
-.model-row.selected { background: var(--bg); border-color: currentColor; }
+.model-row:hover { background: var(--ink-2); }
+.model-row.selected { background: var(--ink-2); border-color: currentColor; }
 .model-row input[type="radio"] { display: none; }
+
 .model-radio-dot {
-  width: 13px; height: 13px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  flex-shrink: 0;
-  margin-top: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid var(--border-hi); flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
   transition: all .12s;
 }
 .model-row.selected .model-radio-dot {
-  background: currentColor;
-  border-color: currentColor;
+  background: currentColor; border-color: currentColor;
 }
 .model-row.selected .model-radio-dot::after {
-  content: '';
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--surface);
+  content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--ink);
 }
+
 .model-info { flex: 1; min-width: 0; }
-.model-name { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
-.model-tagrow { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 2px; }
-.mtag {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  border: 1px solid rgba(255,255,255,.07);
-  color: var(--muted);
+.model-name { font-size: 13px; font-weight: 500; line-height: 1.2; margin-bottom: 4px; }
+.model-tagrow { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 3px; }
+.tag {
+  font-family: var(--font-mono); font-size: 9px; padding: 1px 6px; border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.07); color: var(--text-xs);
 }
-.mtag.price { color: var(--yellow); border-color: rgba(234,179,8,.25); }
-.mtag.ctx  { color: var(--blue); border-color: rgba(59,130,246,.2); }
-.mtag.tier-flagship { color: var(--muted); }
-.mtag.tier-fast { color: var(--green); border-color: rgba(34,197,94,.2); }
-.mtag.tier-cheap { color: #f97316; border-color: rgba(249,115,22,.2); }
-.model-desc { font-size: 10px; color: var(--muted); line-height: 1.4; }
-/* Base URL row */
+.tag.price { color: var(--gold); border-color: rgba(212,168,83,.25); }
+.tag.ctx { color: #60a5fa; border-color: rgba(96,165,250,.2); }
+.tag.tier-flagship { color: var(--text-dim); border-color: rgba(255,255,255,.1); }
+.tag.tier-fast { color: var(--green); border-color: rgba(34,197,94,.2); }
+.tag.tier-cheap { color: #f97316; border-color: rgba(249,115,22,.2); }
+.model-desc { font-size: 11px; color: var(--text-xs); line-height: 1.4; }
+
+/* Base URL row (compat slots only) */
 .base-url-row {
-  padding: 10px 14px;
+  padding: 12px 18px;
   border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
 }
-.base-url-row label {
-  display: block;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.base-url-row input {
-  font-family: monospace;
-  font-size: 10px;
-  padding: 5px 8px;
-}
-/* Team summary chips */
+.base-url-row label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
+.base-url-row input { font-family: var(--font-mono); font-size: 11px; }
+
+/* Team summary strip */
 .team-summary {
-  padding: 10px 14px;
+  padding: 12px 18px;
   border-top: 1px solid var(--border);
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-  flex-shrink: 0;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
 }
 .team-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; border: 1px solid var(--border); background: var(--ink-2);
 }
 .team-chip-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* ─────────────────────────── PROGRESS ─────────────────────────── */
+.progress-block { display: none; margin-bottom: 28px; }
+.progress-block.visible { display: block; }
+.progress-inner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.progress-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 14px; }
+.progress-title { font-family: var(--font-serif); font-size: 17px; font-weight: 400; margin-bottom: 2px; }
+.progress-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+.stage-track { display: flex; align-items: center; padding: 4px 24px 18px; }
+.stage-node { flex: 1; display: flex; align-items: center; }
+.stage-node:last-child { flex: none; }
+.stage-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 15px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--ink-2); font-size: 12px; font-weight: 500; color: var(--text-xs);
+  transition: all .3s; white-space: nowrap;
+}
+.stage-pill .snum {
+  font-family: var(--font-mono); font-size: 10px; width: 17px; height: 17px;
+  border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.stage-pill.active { border-color: var(--gold); background: var(--gold-dim); color: var(--gold); animation: stagePulse 2s infinite; }
+.stage-pill.active .snum { background: var(--gold); color: var(--ink); }
+.stage-pill.done { border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.06); color: var(--green); }
+.stage-pill.done .snum { background: var(--green); color: var(--ink); font-size: 0; }
+.stage-pill.done .snum::after { content: '✓'; font-size: 10px; }
+.stage-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; }
+@keyframes stagePulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50% { box-shadow: 0 0 0 5px transparent; }
+}
+
+.pbar-track { height: 3px; background: var(--ink); }
+.pbar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #f0c070); transition: width .4s ease; border-radius: 0 2px 2px 0; }
+
+.event-log { border-top: 1px solid var(--border); padding: 14px 20px; max-height: 200px; overflow-y: auto; }
+.event-log::-webkit-scrollbar { width: 3px; }
+.event-log::-webkit-scrollbar-thumb { background: var(--border-hi); }
+.event-row { display: flex; gap: 9px; padding: 2px 0; font-family: var(--font-mono); font-size: 11px; border-bottom: 1px solid rgba(255,255,255,.025); }
+.event-row:last-child { border-bottom: none; }
+.ets { color: var(--text-xs); flex-shrink: 0; }
+.etyp { flex-shrink: 0; padding: 0 5px; border-radius: 3px; font-size: 9px; background: rgba(255,255,255,.04); color: var(--gold); align-self: flex-start; margin-top: 1px; }
+.emsg { color: var(--text-dim); flex: 1; }
+.eprov { color: var(--c-compat); font-size: 10px; flex-shrink: 0; }
+
+/* ─────────────────────────── TABS ─────────────────────────── */
+.main-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 26px; }
+.main-tab {
+  padding: 9px 17px; cursor: pointer; font-size: 12px; font-weight: 500; letter-spacing: .3px;
+  color: var(--text-dim); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  border-radius: 4px 4px 0 0; transition: all .15s;
+}
+.main-tab:hover { color: var(--text); background: rgba(255,255,255,.02); }
+.main-tab.active { color: var(--gold); border-bottom-color: var(--gold); background: var(--gold-dim); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ─────────────────────────── EMPTY STATE ─────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 70px 40px; text-align: center; }
+.empty-icon { font-size: 44px; margin-bottom: 14px; opacity: .4; }
+.empty-state h3 { font-family: var(--font-serif); font-size: 20px; color: var(--text-dim); font-weight: 400; margin-bottom: 6px; }
+.empty-state p { font-size: 13px; color: var(--text-xs); max-width: 300px; }
+
+/* ─────────────────────────── RUN HISTORY ─────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { text-align: left; padding: 8px 14px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text-xs); border-bottom: 1px solid var(--border); }
+.data-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.03); vertical-align: middle; }
+.data-table tr:hover td { background: rgba(255,255,255,.012); }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: .5px;
+}
+.status-badge.complete { background: rgba(34,197,94,.1); color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+.status-badge.running { background: rgba(212,168,83,.1); color: var(--gold); border: 1px solid rgba(212,168,83,.25); animation: stagePulse 2s infinite; }
+.status-badge.error { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+.status-badge.starting { background: rgba(109,122,255,.1); color: #a5b4fc; border: 1px solid rgba(109,122,255,.25); }
+
+/* ─────────────────────────── IDEA GRID ─────────────────────────── */
+.idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+.idea-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; transition: border-color .2s, transform .18s; }
+.idea-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+.idea-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.idea-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.provider-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+  border-radius: 4px; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; border: 1px solid currentColor;
+}
+.provider-badge.openai { color: var(--c-openai); }
+.provider-badge.anthropic { color: var(--c-anthropic); }
+.idea-summary { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.6; }
+.idea-details { display: flex; flex-direction: column; gap: 6px; }
+.idea-drow { display: flex; gap: 8px; font-size: 12px; }
+.idea-dlabel { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: .5px; text-transform: uppercase; color: var(--text-xs); flex-shrink: 0; padding-top: 2px; min-width: 50px; }
+.idea-dval { color: var(--text-dim); line-height: 1.5; }
+
+/* ─────────────────────────── PLAN ACCORDION ─────────────────────────── */
+.plan-accordion { display: flex; flex-direction: column; gap: 8px; }
+details.plan-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+details.plan-item[open] { border-color: var(--border-hi); }
+details.plan-item[open] summary { border-bottom: 1px solid var(--border); }
+details.plan-item summary { list-style: none; cursor: pointer; padding: 16px 20px; display: flex; align-items: center; gap: 12px; user-select: none; }
+details.plan-item summary::-webkit-details-marker { display: none; }
+details.plan-item summary:hover { background: rgba(255,255,255,.015); }
+.plan-chevron { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 5px; display: flex; align-items: center; justify-content: center; transition: transform .2s, background .15s; flex-shrink: 0; }
+details[open] .plan-chevron { transform: rotate(90deg); background: var(--gold-dim); border-color: var(--gold); }
+.plan-chevron svg { width: 10px; height: 10px; stroke: var(--text-dim); fill: none; }
+.plan-summary-text { flex: 1; }
+.plan-summary-text strong { font-size: 13px; font-weight: 600; }
+.plan-summary-text span { font-family: var(--font-mono); font-size: 11px; color: var(--text-xs); display: block; margin-top: 2px; }
+.plan-body { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.plan-sec h4 { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 7px; }
+.plan-sec p { font-size: 12px; color: var(--text-dim); line-height: 1.65; }
+.plan-sec.full { grid-column: 1 / -1; }
+.market-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 8px; }
+.market-cell { background: var(--ink-2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; }
+.market-cell-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-xs); margin-bottom: 3px; }
+.market-cell-val { font-size: 12px; font-weight: 500; }
+.risk-list { display: flex; flex-direction: column; gap: 7px; }
+.risk-row { display: flex; gap: 8px; align-items: flex-start; }
+.risk-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; margin-top: 1px; letter-spacing: .5px; }
+.risk-badge.critical { background: rgba(239,68,68,.15); color: #f87171; }
+.risk-badge.high { background: rgba(234,179,8,.12); color: #fbbf24; }
+.risk-badge.medium { background: rgba(59,130,246,.12); color: #93c5fd; }
+.risk-badge.low { background: rgba(34,197,94,.1); color: #86efac; }
+.risk-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.competitor-list { display: flex; flex-direction: column; gap: 8px; }
+.competitor-row { background: var(--ink-2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; }
+.competitor-name { font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+.competitor-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.competitor-fact { font-size: 11px; color: var(--text-dim); }
+.competitor-fact strong { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-xs); display: block; margin-bottom: 1px; }
+
+/* ─────────────────────────── PITCH CARDS ─────────────────────────── */
+.pitch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; }
+.pitch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; transition: border-color .2s; }
+.pitch-card:hover { border-color: var(--border-hi); }
+.pitch-elevator { font-family: var(--font-serif); font-size: 14px; font-style: italic; line-height: 1.55; margin: 12px 0 14px; padding: 12px 14px; border-left: 2px solid var(--gold); background: var(--gold-dim); border-radius: 0 6px 6px 0; }
+.pitch-ask { font-size: 12px; color: var(--text-dim); padding: 9px 12px; background: var(--ink-2); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 13px; }
+.investor-votes { border-top: 1px solid var(--border); padding-top: 13px; margin-top: 13px; }
+.vote-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.vote-header-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-xs); }
+.vote-score-big { font-family: var(--font-serif); font-size: 22px; }
+.vote-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+.vote-row:last-child { border-bottom: none; }
+.vote-dec { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; flex-shrink: 0; }
+.vote-dec.invest { background: rgba(34,197,94,.12); color: var(--green); }
+.vote-dec.pass { background: rgba(239,68,68,.1); color: var(--red); }
+.vote-investor { font-size: 12px; flex: 1; }
+.vote-conv { font-family: var(--font-mono); font-size: 12px; color: var(--gold); }
+
+/* ─────────────────────────── PORTFOLIO HERO ─────────────────────────── */
+.portfolio-hero { background: linear-gradient(135deg, var(--ink) 0%, rgba(212,168,83,.04) 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 22px; }
+.portfolio-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 26px 30px 18px; border-bottom: 1px solid var(--border); }
+.portfolio-title { font-family: var(--font-serif); font-size: 28px; font-weight: 400; line-height: 1.1; margin-bottom: 3px; }
+.portfolio-subtitle { font-size: 12px; color: var(--text-dim); }
+.portfolio-meta { text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--text-xs); }
+.portfolio-meta strong { display: block; font-size: 22px; color: var(--gold); font-family: var(--font-sans); font-weight: 700; }
+.portfolio-table-wrap { overflow-x: auto; }
+.portfolio-table { width: 100%; border-collapse: collapse; }
+.portfolio-table th { text-align: left; padding: 9px 20px; font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-xs); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.portfolio-table td { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,.03); vertical-align: top; }
+.portfolio-table tr:last-child td { border-bottom: none; }
+.portfolio-table tr:hover td { background: rgba(212,168,83,.02); }
+.rank-num { font-family: var(--font-serif); font-size: 26px; font-weight: 400; line-height: 1; }
+.rank-1 { color: var(--gold); }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+.pitch-cell { max-width: 380px; font-size: 12px; color: var(--text-dim); line-height: 1.55; font-style: italic; }
+.votes-fraction { font-family: var(--font-mono); font-size: 14px; font-weight: 500; }
+.votes-bar { margin-top: 4px; height: 3px; background: var(--border); border-radius: 2px; width: 60px; }
+.votes-bar-fill { height: 100%; border-radius: 2px; background: var(--green); }
+.conviction-ring { width: 46px; height: 46px; margin: 0 auto; position: relative; }
+.conviction-ring svg { transform: rotate(-90deg); }
+.conviction-ring .val { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
+.ask-cell { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+/* ─────────────────────────── RESPONSIVE ─────────────────────────── */
+@media (max-width: 960px) {
+  .config-outer { grid-template-columns: 1fr; }
+  .slot-strip { grid-template-columns: 1fr 1fr; }
+  .plan-body { grid-template-columns: 1fr; }
+  .portfolio-table th:nth-child(4), .portfolio-table td:nth-child(4) { display: none; }
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1><span>VC</span> AI Incubator</h1>
-    <div id="wsStatus"><span class="status-dot disconnected"></span> Disconnected</div>
-  </header>
+<div class="shell">
 
-  <!-- Control Panel -->
-  <div class="panel" id="controlPanel">
-    <h2>Control Panel</h2>
-    <div class="panel-grid">
+<!-- HEADER -->
+<header>
+  <div class="wordmark">
+    <span class="wordmark-vc">VC</span>
+    <span class="wordmark-rest">AI&nbsp;Incubator</span>
+  </div>
+  <div class="ws-badge" id="wsStatus">
+    <span class="ws-dot" id="wsDot"></span>
+    <span id="wsLabel">Connecting…</span>
+  </div>
+</header>
 
-      <!-- Pipeline Settings -->
-      <div class="panel-section">
-        <h3>Pipeline Settings</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>Number of Startups (per model)</label>
-            <select id="cfgIdeas"><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
-          </div>
-          <div class="field">
-            <label>Iteration Rounds</label>
-            <select id="cfgIter"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option></select>
-          </div>
-        </div>
+<!-- CONFIG -->
+<div class="section-label">Pipeline Configuration</div>
+
+<div class="config-outer">
+
+  <!-- LEFT -->
+  <div class="config-left">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:16px">Run settings</div>
+      <div class="field-row">
         <div class="field">
-          <label>Sector Focus (optional)</label>
-          <input type="text" id="cfgSector" placeholder="e.g. Healthcare, Fintech, Climate Tech, AI/ML...">
-          <div class="hint">Leave empty for diverse ideas across all sectors</div>
-        </div>
-        <div class="field">
-          <label>Mode</label>
-          <select id="cfgMock">
-            <option value="true">Mock (no API keys needed)</option>
-            <option value="false">Live (real API calls)</option>
+          <label>Ideas per model</label>
+          <select id="cfgIdeas">
+            <option value="3">3</option><option value="5" selected>5</option>
+            <option value="7">7</option><option value="10">10</option>
           </select>
         </div>
         <div class="field">
-          <div class="toggle-row">
-            <div>
-              <div style="font-size:12px;color:var(--muted);font-weight:500">Advisor Deliberation</div>
-              <div class="hint">Lead advisor synthesizes all reviews before founder iterates</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="cfgDeliberation"><span class="toggle-slider"></span></label>
-          </div>
+          <label>Iteration rounds</label>
+          <select id="cfgIter">
+            <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option>
+          </select>
         </div>
       </div>
-
-      <!-- Team Builder (replaces flat model dropdowns) -->
-      <div class="team-builder-section">
-        <div class="team-builder-head">
-          <h3>AI Panel</h3>
-          <p>4 providers compete as founders, advisors &amp; investors. Slots 3 &amp; 4 accept any OpenAI-compatible API.</p>
-        </div>
-        <div class="slot-strip" id="slotStrip"></div>
-        <div id="pickerPanels" style="position:relative"></div>
-        <div class="team-summary" id="teamSummary"></div>
+      <div class="field">
+        <label>Sector focus</label>
+        <input type="text" id="cfgSector" placeholder="Healthcare, Fintech, Climate Tech…">
+        <div class="field-hint">Leave blank for all sectors</div>
       </div>
-
-      <!-- API Keys -->
-      <div class="panel-section">
-        <h3>API Keys</h3>
-        <div class="field">
-          <label>OpenAI API Key</label>
-          <input type="password" id="keyOpenai" placeholder="sk-...">
-        </div>
-        <div class="field">
-          <label>Anthropic API Key</label>
-          <input type="password" id="keyAnthropic" placeholder="sk-ant-...">
-        </div>
-        <div class="field">
-          <label>DeepSeek API Key</label>
-          <input type="password" id="keyDeepseek" placeholder="sk-...">
-        </div>
-        <div class="field">
-          <label>Gemini API Key</label>
-          <input type="password" id="keyGemini" placeholder="AI...">
-        </div>
-        <div class="key-warning">
-          Keys are sent to the server over your connection and used only for this run. They are never stored to disk or logged. For production, use .env files instead.
-        </div>
+      <div class="field">
+        <label>Mode</label>
+        <select id="cfgMock">
+          <option value="true">Mock — no API calls (testing)</option>
+          <option value="false">Live — real API calls</option>
+        </select>
       </div>
     </div>
 
-    <div class="actions">
-      <button class="lg" id="btnRun" onclick="startRun()">Launch Incubator</button>
-      <button class="secondary" onclick="loadRuns()">Refresh Runs</button>
-      <button class="secondary" onclick="runEstimate()">Estimate Cost</button>
-      <span class="run-status" id="runStatus"></span>
+    <div class="card" id="apiKeySection">
+      <div class="section-label" style="margin-bottom:16px">API keys</div>
+      <div class="field"><label>OpenAI</label><input type="password" id="keyOpenai" placeholder="sk-…" disabled></div>
+      <div class="field"><label>Anthropic</label><input type="password" id="keyAnthropic" placeholder="sk-ant-…" disabled></div>
+      <div class="field"><label>Compatible slot 3</label><input type="password" id="keyCompat1" placeholder="API key…" disabled></div>
+      <div class="field" style="margin-bottom:0"><label>Compatible slot 4</label><input type="password" id="keyCompat2" placeholder="API key…" disabled></div>
+      <div class="api-notice">
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Keys sent to your local server only. Use a <code style="font-size:10px">.env</code> file for production.
+      </div>
     </div>
-    <div id="estimateResult" style="display:none"></div>
+
+    <div class="card">
+      <div class="launch-bar">
+        <button class="btn btn-primary" id="btnRun" onclick="startRun()">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Launch
+        </button>
+        <button class="btn btn-ghost" onclick="loadRuns()">Refresh</button>
+        <span class="run-status-text" id="runStatus"></span>
+      </div>
+    </div>
   </div>
 
-  <!-- Progress Section -->
-  <div class="progress-section" id="progressSection">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong>Pipeline Progress</strong>
-      <span class="run-status" id="progressStatus"></span>
+  <!-- RIGHT: TEAM BUILDER -->
+  <div class="team-builder">
+    <div class="team-builder-head">
+      <div>
+        <h2>Assemble Your AI Panel</h2>
+        <p>4 providers compete as founders, advisors, and investors. Slots 3 &amp; 4 accept any OpenAI-compatible API.</p>
+      </div>
     </div>
-    <div class="stage-badges" id="stageBadges">
-      <div class="stage-badge" data-stage="stage1">Stage 1: Ideate & Select</div>
-      <div class="stage-badge" data-stage="stage2">Stage 2: Build & Iterate</div>
-      <div class="stage-badge" data-stage="stage3">Stage 3: Seed Pitch</div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="event-log" id="eventLog"></div>
-  </div>
 
-  <!-- Tabs -->
-  <div class="tabs" id="mainTabs">
-    <div class="tab active" data-tab="runs">Run History</div>
-    <div class="tab" data-tab="ideas">Ideas</div>
-    <div class="tab" data-tab="plans">Startup Plans</div>
-    <div class="tab" data-tab="pitches">Pitches & Decisions</div>
-    <div class="tab" data-tab="portfolio">Portfolio Report</div>    <div class="tab" data-tab="catalog">Model Catalog</div>  </div>
+    <!-- Slot tabs -->
+    <div class="slot-strip" id="slotStrip"></div>
 
-  <div class="tab-content active" id="tab-runs">
-    <div id="runsList" class="empty"><h2>No runs yet</h2><p>Configure the control panel above and click "Launch Incubator" to start.</p></div>
-  </div>
-  <div class="tab-content" id="tab-ideas"><div id="ideasContent" class="empty"><p>Run a pipeline to see ideas here.</p></div></div>
-  <div class="tab-content" id="tab-plans"><div id="plansContent" class="empty"><p>Run a pipeline to see startup plans here.</p></div></div>
-  <div class="tab-content" id="tab-pitches"><div id="pitchesContent" class="empty"><p>Run a pipeline to see pitches and investor decisions here.</p></div></div>
-  <div class="tab-content" id="tab-portfolio"><div id="portfolioContent" class="empty"><p>Run a pipeline to see the portfolio report here.</p></div></div>
-  <div class="tab-content" id="tab-catalog">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h2 style="font-size:18px">Model Catalog</h2>
-      <button class="secondary" onclick="loadCatalog()" style="padding:6px 14px;font-size:12px">Refresh</button>
-    </div>
-    <div class="catalog-filters" id="catalogFilters">
-      <span style="font-size:12px;color:var(--muted);font-weight:500">Filter by tier:</span>
-      <button class="filter-btn active" onclick="filterCatalog('all', this)">All</button>
-      <button class="filter-btn" onclick="filterCatalog('frontier', this)">Frontier</button>
-      <button class="filter-btn" onclick="filterCatalog('strong', this)">Strong</button>
-      <button class="filter-btn" onclick="filterCatalog('efficient', this)">Efficient</button>
-      <button class="filter-btn" onclick="filterCatalog('budget', this)">Budget</button>
-      <button class="filter-btn" onclick="filterCatalog('open-source', this)">Open-Source</button>
-    </div>
-    <div id="catalogContent" class="empty"><p>Loading catalog...</p></div>
+    <!-- Picker panels (one per slot) -->
+    <div id="pickerPanels" style="flex:1;display:flex;flex-direction:column;min-height:380px;overflow:hidden;"></div>
+
+    <!-- Team summary -->
+    <div class="team-summary" id="teamSummary"></div>
   </div>
 </div>
 
+<!-- PROGRESS -->
+<div class="progress-block" id="progressBlock">
+  <div class="section-label" style="margin-bottom:12px">Pipeline progress</div>
+  <div class="progress-inner">
+    <div class="progress-top">
+      <div>
+        <div class="progress-title">Running…</div>
+        <div class="progress-sub" id="progressSub">Initialising</div>
+      </div>
+    </div>
+    <div class="stage-track">
+      <div class="stage-node">
+        <div class="stage-pill" id="pill1"><div class="snum">1</div>Ideate &amp; Select</div>
+      </div>
+      <div class="stage-line"></div>
+      <div class="stage-node">
+        <div class="stage-pill" id="pill2"><div class="snum">2</div>Build &amp; Iterate</div>
+      </div>
+      <div class="stage-line"></div>
+      <div class="stage-node">
+        <div class="stage-pill" id="pill3"><div class="snum">3</div>Seed Pitch</div>
+      </div>
+    </div>
+    <div class="pbar-track"><div class="pbar-fill" id="pbarFill" style="width:0%"></div></div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="main-tabs">
+  <div class="main-tab active" data-tab="runs" onclick="switchTab('runs')">Run History</div>
+  <div class="main-tab" data-tab="ideas" onclick="switchTab('ideas')">Ideas</div>
+  <div class="main-tab" data-tab="plans" onclick="switchTab('plans')">Startup Plans</div>
+  <div class="main-tab" data-tab="pitches" onclick="switchTab('pitches')">Pitches &amp; Decisions</div>
+  <div class="main-tab" data-tab="portfolio" onclick="switchTab('portfolio')">Portfolio Report</div>
+</div>
+
+<div class="tab-pane active" id="pane-runs">
+  <div id="runsList"><div class="empty-state"><div class="empty-icon">📋</div><h3>No runs yet</h3><p>Configure the panel above and click Launch.</p></div></div>
+</div>
+<div class="tab-pane" id="pane-ideas"><div id="ideasContent"><div class="empty-state"><div class="empty-icon">💡</div><h3>No ideas yet</h3><p>Ideas generated in Stage 1 appear here.</p></div></div></div>
+<div class="tab-pane" id="pane-plans"><div id="plansContent"><div class="empty-state"><div class="empty-icon">📐</div><h3>No plans yet</h3><p>Startup plans appear after Stage 2.</p></div></div></div>
+<div class="tab-pane" id="pane-pitches"><div id="pitchesContent"><div class="empty-state"><div class="empty-icon">🎤</div><h3>No pitches yet</h3><p>Pitches and investor decisions appear after Stage 3.</p></div></div></div>
+<div class="tab-pane" id="pane-portfolio"><div id="portfolioContent"><div class="empty-state"><div class="empty-icon">🏆</div><h3>Portfolio pending</h3><p>Ranked results appear once the pipeline completes.</p></div></div></div>
+
+</div><!-- /shell -->
+
 <script>
-/* ════════════════════════════════════════════════════
-   TEAM BUILDER — slot data and UI logic
-════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   FULL MARKET MODEL CATALOG — February 2026
+   Organised by API wire type, then by company/model.
+   Pricing: USD per 1M tokens (input / output).
+═══════════════════════════════════════════════════════════════ */
 const SLOTS = [
+  /* ── Slot 0: OpenAI Responses API (locked to OpenAI) ─────── */
   {
-    label: 'Slot 1', type: 'OpenAI Responses API',
-    color: 'var(--c-openai)', keyField: 'keyOpenai',
-    configKey: 'openai',   // maps to models.openai in RunConfig
-    fixed: true, defaultModel: 'gpt-4o',
+    label: 'Slot 1',
+    type: 'OpenAI Responses API',
+    color: 'var(--c-openai)',
+    keyField: 'keyOpenai',
+    configKey: 'openai',        // maps to models.openai in server config
+    fixed: true,                // provider company is fixed
+    defaultModel: 'gpt-5.2',
     providers: [
       {
-        name: 'OpenAI', color: 'var(--c-openai)',
+        name: 'OpenAI',
+        color: 'var(--c-openai)',
         baseUrl: 'https://api.openai.com/v1',
         models: [
-          { id:'gpt-4o',           name:'GPT-4o',         price:'$2.50/$10',   ctx:'128K', tier:'flagship', desc:'Best general-purpose model. Strong reasoning and code.' },
-          { id:'gpt-4o-mini',      name:'GPT-4o Mini',    price:'$0.15/$0.60', ctx:'128K', tier:'fast',     desc:'Fast and cheap. Best value for high-volume tasks.' },
-          { id:'o3-mini',          name:'o3-mini',         price:'$1.10/$4.4',  ctx:'200K', tier:'flagship', desc:'Efficient chain-of-thought reasoning.' },
-          { id:'gpt-4.1',          name:'GPT-4.1',         price:'$2.00/$8',    ctx:'1M',   tier:'fast',     desc:'1M context. Strong for long-document work.' },
-          { id:'gpt-4.1-mini',     name:'GPT-4.1 mini',   price:'$0.40/$1.60', ctx:'1M',   tier:'fast',     desc:'Cost-efficient with massive context.' },
+          { id:'gpt-5.2',       name:'GPT-5.2',         price:'$1.75 / $14',  ctx:'400K',  tier:'flagship', desc:'Flagship agentic model with xhigh reasoning effort. Best price among frontier tier.' },
+          { id:'gpt-5.2-pro',   name:'GPT-5.2 Pro',     price:'Custom',       ctx:'400K',  tier:'flagship', desc:'Maximum quality — extended reasoning context. Best for multi-step planning tasks.' },
+          { id:'gpt-5.1',       name:'GPT-5.1',         price:'~$1.25 / $10', ctx:'400K',  tier:'flagship', desc:'Previous flagship, still excellent. No current deprecation planned.' },
+          { id:'gpt-5',         name:'GPT-5',            price:'$1.25 / $10',  ctx:'400K',  tier:'flagship', desc:'Solid frontier model. Native JSON mode. Strong for structured outputs.' },
+          { id:'o3',            name:'o3',               price:'$2.60 / $10.4',ctx:'200K',  tier:'flagship', desc:'Deliberate step-by-step reasoning. Excels at multi-hop logic and planning.' },
+          { id:'o3-mini',       name:'o3-mini',          price:'$1.10 / $4.4', ctx:'200K',  tier:'flagship', desc:'Efficient reasoning. Good cost/quality balance for advisor roles.' },
+          { id:'gpt-4.1',       name:'GPT-4.1',         price:'$2.00 / $8',   ctx:'1M',    tier:'fast',     desc:'1M context window. Strong for long-document work. Proven in production.' },
+          { id:'gpt-4.1-mini',  name:'GPT-4.1 mini',    price:'$0.40 / $1.60',ctx:'1M',    tier:'fast',     desc:'Cost-efficient with massive context. Good for high-volume feedback loops.' },
+          { id:'gpt-4.1-nano',  name:'GPT-4.1 nano',    price:'$0.10 / $0.40',ctx:'1M',    tier:'cheap',    desc:'Cheapest 1M-context model available. Simple classification tasks.' },
+          { id:'gpt-5-mini',    name:'GPT-5 mini',       price:'$0.25 / $2',   ctx:'128K',  tier:'fast',     desc:'Best value for quality. Native JSON mode. Recommended for advisor/feedback roles.' },
+          { id:'gpt-5-nano',    name:'GPT-5 nano',       price:'$0.05 / $0.40',ctx:'32K',   tier:'cheap',    desc:'Cheapest structured output model. Tight context — best for scoring tasks only.' },
         ]
       }
     ]
   },
+
+  /* ── Slot 1: Anthropic Messages API (locked to Anthropic) ─── */
   {
-    label: 'Slot 2', type: 'Anthropic Messages API',
-    color: 'var(--c-anthropic)', keyField: 'keyAnthropic',
-    configKey: 'anthropic', fixed: true,
-    defaultModel: 'claude-3-5-haiku-20241022',
+    label: 'Slot 2',
+    type: 'Anthropic Messages API',
+    color: 'var(--c-anthropic)',
+    keyField: 'keyAnthropic',
+    configKey: 'anthropic',
+    fixed: true,
+    defaultModel: 'claude-opus-4-5',
     providers: [
       {
-        name: 'Anthropic', color: 'var(--c-anthropic)',
+        name: 'Anthropic',
+        color: 'var(--c-anthropic)',
         baseUrl: 'https://api.anthropic.com/v1',
         models: [
-          { id:'claude-opus-4-6',   name:'Claude Opus 4.6',   price:'$5/$25',    ctx:'200K', tier:'flagship', desc:'Best instruction-following. Top choice for investor/advisor roles.' },
-          { id:'claude-sonnet-4-6', name:'Claude Sonnet 4.6', price:'$3/$15',    ctx:'200K', tier:'flagship', desc:'Best capability-cost ratio in the Claude family.' },
-          { id:'claude-sonnet-4-5', name:'Claude Sonnet 4.5', price:'$3/$15',    ctx:'200K', tier:'flagship', desc:'Optimised for agentic and iterative work.' },
-          { id:'claude-3-5-haiku-20241022', name:'Claude Haiku 3.5', price:'$0.80/$4', ctx:'200K', tier:'fast', desc:'Near-frontier quality at lower cost. Fastest Claude.' },
+          { id:'claude-opus-4-6',     name:'Claude Opus 4.6',     price:'$5 / $25',   ctx:'200K', tier:'flagship', desc:'67% cheaper than Opus 4.1. Best instruction-following and persona consistency. Top choice for investor/advisor roles.' },
+          { id:'claude-sonnet-4-6',   name:'Claude Sonnet 4.6',   price:'$3 / $15',   ctx:'200K', tier:'flagship', desc:'Latest Sonnet — best capability-cost ratio in the Claude family. Strong for founder and advisor roles.' },
+          { id:'claude-sonnet-4-5',   name:'Claude Sonnet 4.5',   price:'$3 / $15',   ctx:'200K', tier:'flagship', desc:'Optimised for agentic and iterative work. Best coding model in the Claude family.' },
+          { id:'claude-opus-4-5',     name:'Claude Opus 4.5',     price:'$5 / $25',   ctx:'200K', tier:'flagship', desc:'80.9% SWE-bench. Exceptional nuanced feedback and multi-criteria scoring. Previous flagship.' },
+          { id:'claude-haiku-4-5',    name:'Claude Haiku 4.5',    price:'$1 / $5',    ctx:'200K', tier:'fast',     desc:'Near-frontier quality at 5× lower cost than Sonnet. Fastest Claude. Ideal for feedback rounds.' },
         ]
       }
     ]
   },
+
+  /* ── Slot 2: OpenAI-Compatible (any provider) ─────────────── */
   {
-    label: 'Slot 3', type: 'OpenAI-Compatible API',
-    color: 'var(--c-compat)', keyField: 'keyDeepseek',
-    configKey: 'deepseek',  // maps to models.deepseek in RunConfig
-    fixed: false, defaultModel: 'deepseek-chat',
+    label: 'Slot 3',
+    type: 'OpenAI-Compatible API',
+    color: 'var(--c-compat)',
+    keyField: 'keyCompat1',
+    configKey: 'deepseek',      // server's existing key for this slot
+    fixed: false,               // user picks provider company
+    defaultModel: 'deepseek-reasoner',
     defaultProvider: 'DeepSeek',
     defaultBaseUrl: 'https://api.deepseek.com/v1',
     providers: [
       {
-        name: 'DeepSeek', color: 'var(--c-deepseek)',
+        name: 'Google',
+        color: 'var(--c-google)',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        models: [
+          { id:'gemini-3.1-pro-preview', name:'Gemini 3.1 Pro Preview', price:'$2 / $12',    ctx:'1M',   tier:'flagship', desc:'94.3% GPQA Diamond. Largest context of any frontier model. Thinking tokens billed as output.' },
+          { id:'gemini-3-pro-preview',   name:'Gemini 3 Pro Preview',   price:'$2 / $12',    ctx:'1M',   tier:'flagship', desc:'Stable production flagship. Excellent for technical analysis and long-form reasoning.' },
+          { id:'gemini-2.5-pro',         name:'Gemini 2.5 Pro',         price:'$1.25 / $10', ctx:'1M',   tier:'flagship', desc:'Previous generation. Wide ecosystem support. Competitive benchmarks.' },
+          { id:'gemini-3-flash',         name:'Gemini 3 Flash',         price:'$0.50 / $3',  ctx:'1M',   tier:'fast',     desc:'Best value for 1M-context tasks. Strong for bulk feedback and multi-document review.' },
+          { id:'gemini-2.5-flash',       name:'Gemini 2.5 Flash',       price:'$0.10 / $0.40',ctx:'1M',  tier:'cheap',    desc:'Cheapest 1M-context option. Ideal for high-volume, cost-sensitive feedback rounds.' },
+        ]
+      },
+      {
+        name: 'DeepSeek',
+        color: 'var(--c-deepseek)',
         baseUrl: 'https://api.deepseek.com/v1',
         models: [
-          { id:'deepseek-reasoner', name:'DeepSeek Reasoner', price:'$0.55/$2.19', ctx:'64K', tier:'flagship', desc:'Chain-of-thought before JSON. Great for multi-step analysis.' },
-          { id:'deepseek-chat',     name:'DeepSeek Chat',     price:'$0.27/$1.10', ctx:'64K', tier:'fast',     desc:'Lightest DeepSeek model. High-volume feedback tasks.' },
+          { id:'deepseek-v3.2-exp',  name:'DeepSeek V3.2 Exp',  price:'$0.28 / $0.42', ctx:'128K', tier:'flagship', desc:'50–100× cheaper than frontier closed models. Cache hits near-free at $0.028/M. Best overall value.' },
+          { id:'deepseek-reasoner',  name:'DeepSeek Reasoner',  price:'$0.55 / $2.19', ctx:'64K',  tier:'flagship', desc:'Emits chain-of-thought before JSON. Excellent for complex multi-step analysis. JSON extraction handles CoT.' },
+          { id:'deepseek-chat',      name:'DeepSeek Chat',      price:'$0.27 / $1.10', ctx:'64K',  tier:'fast',     desc:'Lightest DeepSeek model. Best for high-volume feedback tasks where reasoning depth matters less.' },
         ]
       },
       {
-        name: 'Mistral', color: 'var(--c-mistral)',
+        name: 'Mistral AI',
+        color: 'var(--c-mistral)',
         baseUrl: 'https://api.mistral.ai/v1',
         models: [
-          { id:'mistral-large-latest',  name:'Mistral Large',  price:'$2/$6',       ctx:'128K', tier:'flagship', desc:'Strong European reasoning. Excellent structured output.' },
-          { id:'mistral-medium-latest', name:'Mistral Medium', price:'$0.40/$2',    ctx:'128K', tier:'fast',     desc:'Balanced quality and cost for advisor roles.' },
-          { id:'mistral-small-latest',  name:'Mistral Small',  price:'$0.10/$0.30', ctx:'128K', tier:'cheap',   desc:'Highly cost-efficient. Reliable JSON output.' },
+          { id:'mistral-large-latest',   name:'Mistral Large',    price:'$2 / $6',    ctx:'128K', tier:'flagship', desc:'Strong European-perspective reasoning. Excellent structured output compliance. Competitive pricing.' },
+          { id:'mistral-medium-latest',  name:'Mistral Medium',   price:'$0.40 / $2', ctx:'128K', tier:'fast',     desc:'Balanced quality and cost. Good for advisor roles where max capability is not required.' },
+          { id:'mistral-small-latest',   name:'Mistral Small',    price:'$0.10 / $0.30',ctx:'128K',tier:'cheap',   desc:'Highly cost-efficient. Reliable JSON output. Great for structured feedback and scoring.' },
+          { id:'codestral-latest',       name:'Codestral',        price:'$0.30 / $0.90',ctx:'256K',tier:'fast',   desc:'Optimised for code and technical tasks. Best Mistral model for technical advisor roles.' },
+          { id:'ministral-8b-latest',    name:'Ministral 8B',     price:'$0.10 / $0.10',ctx:'128K',tier:'cheap',  desc:'Cheapest Mistral option. Simple tasks, high-volume feedback rounds.' },
         ]
       },
       {
-        name: 'xAI', color: 'var(--c-xai)',
+        name: 'xAI',
+        color: 'var(--c-xai)',
         baseUrl: 'https://api.x.ai/v1',
         models: [
-          { id:'grok-3',      name:'Grok 3',      price:'$3/$15',    ctx:'131K', tier:'flagship', desc:'Real-world reasoning with live knowledge integration.' },
-          { id:'grok-3-mini', name:'Grok 3 Mini', price:'$0.30/$0.50', ctx:'131K', tier:'fast', desc:'Cost-efficient Grok for advisor and feedback roles.' },
+          { id:'grok-3',      name:'Grok 3',      price:'$3 / $15',   ctx:'131K', tier:'flagship', desc:'Strong real-world reasoning with live knowledge integration. Good analyst persona.' },
+          { id:'grok-3-mini', name:'Grok 3 Mini', price:'$0.30 / $0.50',ctx:'131K',tier:'fast',   desc:'Cost-efficient Grok variant. Good reasoning-to-cost ratio for advisor and feedback roles.' },
+          { id:'grok-4',      name:'Grok 4',      price:'$30 / $150', ctx:'256K', tier:'flagship', desc:'⚠ Most expensive API on the market — 6× Claude Opus. Only if you have a specific Grok use case.' },
         ]
       },
       {
-        name: 'Meta', color: 'var(--c-meta)',
+        name: 'Meta / Llama',
+        color: 'var(--c-meta)',
         baseUrl: 'https://api.together.xyz/v1',
         models: [
-          { id:'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', name:'Llama 4 Maverick', price:'$0.27/$0.85', ctx:'1M',  tier:'flagship', desc:'Open-weights via Together AI. Competitive with mid-tier closed models.' },
-          { id:'meta-llama/Llama-3.3-70B-Instruct-Turbo',           name:'Llama 3.3 70B',    price:'$0.90/$0.90', ctx:'128K',tier:'fast',     desc:'Proven and widely deployed. Reliable JSON output.' },
+          { id:'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', name:'Llama 4 Maverick',  price:'$0.27 / $0.85', ctx:'1M',  tier:'flagship', desc:'Open-weights model via Together AI. Competitive with mid-tier closed models. Self-hostable.' },
+          { id:'meta-llama/Llama-4-Scout-17B-16E-Instruct',          name:'Llama 4 Scout',     price:'$0.18 / $0.59', ctx:'10M', tier:'fast',     desc:'Specialised for retrieval and long-context. Largest context window of any model currently available.' },
+          { id:'meta-llama/Llama-3.3-70B-Instruct-Turbo',           name:'Llama 3.3 70B',     price:'$0.90 / $0.90', ctx:'128K',tier:'fast',     desc:'Proven and widely deployed. Reliable JSON output. Good challenger/advisor model.' },
+          { id:'meta-llama/Llama-3.1-8B-Instruct-Turbo',            name:'Llama 3.1 8B',      price:'$0.18 / $0.18', ctx:'128K',tier:'cheap',    desc:'Extremely cheap inference. Best for bulk feedback rounds where quality tolerance is higher.' },
         ]
       },
       {
-        name: 'Cohere', color: 'var(--c-cohere)',
-        baseUrl: 'https://api.cohere.ai/compatibility/v1',
+        name: 'Qwen / Alibaba',
+        color: 'var(--c-qwen)',
+        baseUrl: 'https://api.together.xyz/v1',
         models: [
-          { id:'command-a-03-2025',   name:'Command A',  price:'$2.77/$13.72', ctx:'256K', tier:'flagship', desc:'Cohere flagship for agentic tasks and RAG.' },
-          { id:'command-r-08-2024',   name:'Command R',  price:'$0.15/$0.60',  ctx:'128K', tier:'cheap',    desc:'Budget option for structured retrieval tasks.' },
+          { id:'Qwen/Qwen3-235B-A22B',     name:'Qwen3 235B',  price:'$0 (preview)', ctx:'131K', tier:'flagship', desc:'235B parameter model, free during preview. Competitive reasoning. Rate limits may apply.' },
+          { id:'Qwen/Qwen3-72B',           name:'Qwen3 72B',   price:'~$0.90 / $0.90',ctx:'131K',tier:'fast',    desc:'Strong mid-size open model. Good alternative to Llama 3.3 for structured tasks.' },
+          { id:'Qwen/Qwen2.5-Coder-32B-Instruct',name:'Qwen2.5 Coder 32B',price:'~$0.80 / $0.80',ctx:'128K',tier:'fast','desc':'Optimised for code and technical reasoning. Good technical advisor model.' },
         ]
       },
       {
-        name: 'Qwen', color: 'var(--c-qwen)',
-        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        name: 'Cohere',
+        color: 'var(--c-cohere)',
+        baseUrl: 'https://api.cohere.ai/v1',
         models: [
-          { id:'Qwen/Qwen3-235B-A22B', name:'Qwen3 235B', price:'$0 (preview)', ctx:'131K', tier:'flagship', desc:'235B parameter model. Competitive reasoning.' },
-          { id:'Qwen/Qwen3-72B',       name:'Qwen3 72B',  price:'~$0.90/$0.90', ctx:'131K', tier:'fast',    desc:'Strong mid-size open model.' },
+          { id:'command-a-03-2025',  name:'Command A',    price:'$2.77 / $13.72', ctx:'256K', tier:'flagship', desc:'Cohere\'s flagship. Optimised for complex agentic tasks, RAG, and multilingual support.' },
+          { id:'command-r-plus-08-2024',name:'Command R+', price:'$2.50 / $10',  ctx:'128K', tier:'flagship', desc:'Strong long-context and retrieval-augmented tasks. Solid enterprise track record.' },
+          { id:'command-r-08-2024',  name:'Command R',    price:'$0.15 / $0.60', ctx:'128K', tier:'cheap',    desc:'Budget option for structured retrieval and simpler reasoning tasks.' },
         ]
       },
     ]
   },
+
+  /* ── Slot 3: OpenAI-Compatible (any provider) ─────────────── */
   {
-    label: 'Slot 4', type: 'OpenAI-Compatible API',
-    color: 'var(--c-google)', keyField: 'keyGemini',
-    configKey: 'gemini',    // maps to models.gemini in RunConfig
-    fixed: false, defaultModel: 'gemini-2.0-flash',
+    label: 'Slot 4',
+    type: 'OpenAI-Compatible API',
+    color: 'var(--c-compat)',
+    keyField: 'keyCompat2',
+    configKey: 'gemini',        // server's existing key for this slot
+    fixed: false,
+    defaultModel: 'gemini-3-pro-preview',
     defaultProvider: 'Google',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    providers: [
-      {
-        name: 'Google', color: 'var(--c-google)',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-        models: [
-          { id:'gemini-3.1-pro-preview', name:'Gemini 3.1 Pro',      price:'$2/$12',      ctx:'1M',   tier:'flagship', desc:'Frontier Gemini. Massive 1M context. Top scientific and coding benchmarks.' },
-          { id:'gemini-3-flash',         name:'Gemini 3 Flash',       price:'$0.50/$3',    ctx:'1M',   tier:'fast',     desc:'Fast Flash model with 1M context. Great for bulk feedback rounds.' },
-          { id:'gemini-2.0-flash',       name:'Gemini 2.0 Flash',     price:'$0.10/$0.40', ctx:'1M',   tier:'cheap',    desc:'Confirmed stable model. Fastest Google option at near-zero cost.' },
-          { id:'gemini-1.5-pro',         name:'Gemini 1.5 Pro',       price:'$1.25/$5',    ctx:'2M',   tier:'flagship', desc:'2M context window. Proven model for long-document analysis.' },
-        ]
-      },
-      {
-        name: 'DeepSeek', color: 'var(--c-deepseek)',
-        baseUrl: 'https://api.deepseek.com/v1',
-        models: [
-          { id:'deepseek-reasoner', name:'DeepSeek Reasoner', price:'$0.55/$2.19', ctx:'64K', tier:'flagship', desc:'Chain-of-thought before JSON. Great for multi-step analysis.' },
-          { id:'deepseek-chat',     name:'DeepSeek Chat',     price:'$0.27/$1.10', ctx:'64K', tier:'fast',     desc:'Lightest DeepSeek model. High-volume feedback tasks.' },
-        ]
-      },
-      {
-        name: 'Mistral', color: 'var(--c-mistral)',
-        baseUrl: 'https://api.mistral.ai/v1',
-        models: [
-          { id:'mistral-large-latest',  name:'Mistral Large',  price:'$2/$6',       ctx:'128K', tier:'flagship', desc:'Strong European reasoning. Excellent structured output.' },
-          { id:'mistral-medium-latest', name:'Mistral Medium', price:'$0.40/$2',    ctx:'128K', tier:'fast',     desc:'Balanced quality and cost for advisor roles.' },
-          { id:'mistral-small-latest',  name:'Mistral Small',  price:'$0.10/$0.30', ctx:'128K', tier:'cheap',    desc:'Highly cost-efficient. Reliable JSON output.' },
-        ]
-      },
-      {
-        name: 'xAI', color: 'var(--c-xai)',
-        baseUrl: 'https://api.x.ai/v1',
-        models: [
-          { id:'grok-3',      name:'Grok 3',      price:'$3/$15',      ctx:'131K', tier:'flagship', desc:'Real-world reasoning with live knowledge integration.' },
-          { id:'grok-3-mini', name:'Grok 3 Mini', price:'$0.30/$0.50', ctx:'131K', tier:'fast',     desc:'Cost-efficient Grok for advisor and feedback roles.' },
-        ]
-      },
-    ]
+    providers: null,            // reuses slot 2's providers (set in JS)
   },
 ];
 
-/* ─── State ─── */
-const teamState = {
+/* State */
+const state = {
   selectedSlot: 0,
-  models:    {},   // slotIndex -> modelId
-  providers: {},   // slotIndex -> providerName (compat slots only)
-  baseUrls:  {},   // slotIndex -> baseUrl (compat slots only)
+  models: {},         // slotIndex -> modelId
+  providers: {},      // slotIndex -> providerName (for compat slots)
+  baseUrls: {},       // slotIndex -> baseUrl
 };
+
+/* ── Init state from defaults ── */
 SLOTS.forEach((slot, i) => {
-  teamState.models[i] = slot.defaultModel;
+  state.models[i] = slot.defaultModel;
   if (!slot.fixed) {
-    teamState.providers[i] = slot.defaultProvider;
-    teamState.baseUrls[i]  = slot.defaultBaseUrl;
+    state.providers[i] = slot.defaultProvider;
+    state.baseUrls[i] = slot.defaultBaseUrl;
   }
 });
 
-/* ─── Build UI ─── */
-function buildTeamUI() {
+/* Slot 4 inherits slot 2's provider list */
+SLOTS[3].providers = SLOTS[2].providers;
+
+/* ══════════════════ BUILD UI ══════════════════ */
+function buildUI() {
   buildSlotStrip();
   buildPickerPanels();
   updateTeamSummary();
@@ -710,137 +858,137 @@ function buildTeamUI() {
 
 function buildSlotStrip() {
   const strip = document.getElementById('slotStrip');
-  if (!strip) return;
   SLOTS.forEach((slot, i) => {
     const btn = document.createElement('div');
     btn.className = 'slot-btn';
     btn.dataset.slot = i;
     btn.style.color = slot.color;
     btn.onclick = () => activateSlot(i);
-    btn.innerHTML =
-      '<div class="slot-label"><span class="slot-dot"></span>' + slot.label + '</div>' +
-      '<div class="slot-type-line">' + slot.type + '</div>' +
-      '<div class="slot-selected-name" id="slot-name-' + i + '">—</div>' +
-      '<div class="slot-selected-price" id="slot-price-' + i + '"></div>';
+    btn.innerHTML = `
+      <div class="slot-label"><span class="slot-dot"></span>${slot.label}</div>
+      <div class="slot-type" style="font-size:10px;color:var(--text-xs)">${slot.type}</div>
+      <div class="slot-selected-name" id="slot-name-${i}">Loading…</div>
+      <div class="slot-selected-price" id="slot-price-${i}"></div>`;
     strip.appendChild(btn);
   });
 }
 
 function buildPickerPanels() {
   const container = document.getElementById('pickerPanels');
-  if (!container) return;
   SLOTS.forEach((slot, si) => {
     const panel = document.createElement('div');
     panel.className = 'picker-panel';
-    panel.id = 'picker-' + si;
+    panel.id = `picker-${si}`;
     panel.style.color = slot.color;
 
+    // For fixed slots, no provider tabs needed
     if (!slot.fixed) {
+      // Provider selector
       const provSel = document.createElement('div');
       provSel.className = 'provider-selector';
-      provSel.id = 'prov-sel-' + si;
+      provSel.id = `prov-sel-${si}`;
       slot.providers.forEach(prov => {
         const tab = document.createElement('div');
         tab.className = 'prov-tab';
         tab.dataset.prov = prov.name;
         tab.style.color = prov.color;
+        tab.innerHTML = `<span class="pd" style="background:${prov.color}"></span>${prov.name}`;
         tab.onclick = () => switchProvider(si, prov.name);
-        tab.innerHTML = '<span class="pd" style="background:' + prov.color + '"></span>' + prov.name;
         provSel.appendChild(tab);
       });
       panel.appendChild(provSel);
     }
 
+    // Model list container
     const scroll = document.createElement('div');
     scroll.className = 'model-scroll';
-    scroll.id = 'model-list-' + si;
+    scroll.id = `model-list-${si}`;
     panel.appendChild(scroll);
 
+    // Base URL row (compat slots only)
     if (!slot.fixed) {
       const urlRow = document.createElement('div');
       urlRow.className = 'base-url-row';
-      urlRow.innerHTML =
-        '<label>Base URL</label>' +
-        '<input type="text" id="baseurl-' + si + '" value="' + (slot.defaultBaseUrl || '') + '" placeholder="https://api.provider.com/v1">';
+      urlRow.innerHTML = `
+        <label style="font-size:9px;letter-spacing:1px;white-space:nowrap">Base URL</label>
+        <input type="text" id="baseurl-${si}" value="${slot.defaultBaseUrl || ''}" placeholder="https://api.provider.com/v1" style="font-family:var(--font-mono);font-size:11px">`;
       panel.appendChild(urlRow);
-      urlRow.querySelector('input').addEventListener('input', function(e) {
-        teamState.baseUrls[si] = e.target.value;
+      document.getElementById; // ensure DOM is ready later
+      // update state when user types
+      panel.querySelector('input').addEventListener('input', e => {
+        state.baseUrls[si] = e.target.value;
       });
     }
 
     container.appendChild(panel);
   });
 
+  // Populate model lists
   SLOTS.forEach((slot, si) => {
-    const prov = slot.fixed
-      ? slot.providers[0]
-      : slot.providers.find(p => p.name === teamState.providers[si]);
+    const prov = slot.fixed ? slot.providers[0] : slot.providers.find(p => p.name === state.providers[si]);
     renderModelList(si, prov);
-    if (!slot.fixed) activateProviderTab(si, teamState.providers[si]);
+    if (!slot.fixed) activateProviderTab(si, state.providers[si]);
   });
 }
 
 function renderModelList(si, prov) {
-  const list = document.getElementById('model-list-' + si);
+  const list = document.getElementById(`model-list-${si}`);
   if (!list || !prov) return;
   const slot = SLOTS[si];
   list.innerHTML = '';
   prov.models.forEach(m => {
-    const isSelected = teamState.models[si] === m.id;
+    const isSelected = state.models[si] === m.id;
     const row = document.createElement('label');
-    row.className = 'model-row' + (isSelected ? ' selected' : '');
+    row.className = `model-row${isSelected ? ' selected' : ''}`;
     row.style.color = slot.color;
     row.dataset.id = m.id;
-    const tierTag = m.tier === 'flagship'
-      ? '<span class="mtag tier-flagship">flagship</span>'
-      : m.tier === 'fast'
-        ? '<span class="mtag tier-fast">efficient</span>'
-        : '<span class="mtag tier-cheap">budget</span>';
-    row.innerHTML =
-      '<input type="radio" name="m-' + si + '" value="' + m.id + '"' + (isSelected ? ' checked' : '') + '>' +
-      '<div class="model-radio-dot"></div>' +
-      '<div class="model-info">' +
-        '<div class="model-name">' + m.name + '</div>' +
-        '<div class="model-tagrow">' +
-          '<span class="mtag price">' + m.price + '</span>' +
-          '<span class="mtag ctx">' + m.ctx + ' ctx</span>' +
-          tierTag +
-        '</div>' +
-        '<div class="model-desc">' + m.desc + '</div>' +
-      '</div>';
-    row.onclick = () => selectModel(si, m.id);
+    row.innerHTML = `
+      <input type="radio" name="m-${si}" value="${m.id}" ${isSelected ? 'checked' : ''}>
+      <div class="model-radio-dot"></div>
+      <div class="model-info">
+        <div class="model-name">${m.name}</div>
+        <div class="model-tagrow">
+          <span class="tag price">${m.price}</span>
+          <span class="tag ctx">${m.ctx} ctx</span>
+          ${m.tier === 'flagship' ? '<span class="tag tier-flagship">flagship</span>' : ''}
+          ${m.tier === 'fast' ? '<span class="tag tier-fast">efficient</span>' : ''}
+          ${m.tier === 'cheap' ? '<span class="tag tier-cheap">budget</span>' : ''}
+        </div>
+        <div class="model-desc">${m.desc}</div>
+      </div>`;
+    row.onclick = () => selectModel(si, m.id, prov);
     list.appendChild(row);
   });
   updateSlotHeader(si);
 }
 
-function selectModel(si, modelId) {
-  teamState.models[si] = modelId;
-  document.querySelectorAll('#model-list-' + si + ' .model-row').forEach(row => {
-    const sel = row.dataset.id === modelId;
-    row.classList.toggle('selected', sel);
-    const radio = row.querySelector('input');
-    if (radio) radio.checked = sel;
+function selectModel(si, modelId, prov) {
+  state.models[si] = modelId;
+  document.querySelectorAll(`#model-list-${si} .model-row`).forEach(row => {
+    row.classList.toggle('selected', row.dataset.id === modelId);
+    row.querySelector('input').checked = row.dataset.id === modelId;
   });
   updateSlotHeader(si);
   updateTeamSummary();
 }
 
 function switchProvider(si, provName) {
-  teamState.providers[si] = provName;
+  state.providers[si] = provName;
   const prov = SLOTS[si].providers.find(p => p.name === provName);
   if (!prov) return;
-  const urlInput = document.getElementById('baseurl-' + si);
-  if (urlInput) { urlInput.value = prov.baseUrl; teamState.baseUrls[si] = prov.baseUrl; }
-  if (!prov.models.find(m => m.id === teamState.models[si])) {
-    teamState.models[si] = prov.models[0].id;
+  // Auto-fill base URL
+  const urlInput = document.getElementById(`baseurl-${si}`);
+  if (urlInput) { urlInput.value = prov.baseUrl; state.baseUrls[si] = prov.baseUrl; }
+  // Set default model for this provider
+  if (!prov.models.find(m => m.id === state.models[si])) {
+    state.models[si] = prov.models[0].id;
   }
   activateProviderTab(si, provName);
   renderModelList(si, prov);
 }
 
 function activateProviderTab(si, provName) {
-  const sel = document.getElementById('prov-sel-' + si);
+  const sel = document.getElementById(`prov-sel-${si}`);
   if (!sel) return;
   sel.querySelectorAll('.prov-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.prov === provName);
@@ -848,129 +996,114 @@ function activateProviderTab(si, provName) {
 }
 
 function activateSlot(si) {
-  teamState.selectedSlot = si;
-  document.querySelectorAll('.slot-btn').forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.slot) === si);
-  });
-  document.querySelectorAll('.picker-panel').forEach(p => {
-    p.classList.toggle('active', p.id === 'picker-' + si);
-  });
+  state.selectedSlot = si;
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.slot) === si));
+  document.querySelectorAll('.picker-panel').forEach(p => p.classList.toggle('active', p.id === `picker-${si}`));
 }
 
 function updateSlotHeader(si) {
   const slot = SLOTS[si];
-  const prov = slot.fixed
-    ? slot.providers[0]
-    : slot.providers.find(p => p.name === teamState.providers[si]);
-  const model = prov && prov.models.find(m => m.id === teamState.models[si]);
-  const nameEl  = document.getElementById('slot-name-' + si);
-  const priceEl = document.getElementById('slot-price-' + si);
-  if (nameEl)  nameEl.textContent  = model ? model.name  : '—';
-  if (priceEl) priceEl.textContent = model ? model.price : '';
+  const prov = slot.fixed ? slot.providers[0] : slot.providers.find(p => p.name === state.providers[si]);
+  const model = prov?.models.find(m => m.id === state.models[si]);
+  const nameEl = document.getElementById(`slot-name-${si}`);
+  const priceEl = document.getElementById(`slot-price-${si}`);
+  if (nameEl) nameEl.textContent = model?.name ?? '—';
+  if (priceEl) priceEl.textContent = model?.price ?? '';
 }
 
 function updateTeamSummary() {
   const summary = document.getElementById('teamSummary');
-  if (!summary) return;
   const chips = SLOTS.map((slot, si) => {
-    const prov = slot.fixed
-      ? slot.providers[0]
-      : slot.providers.find(p => p.name === teamState.providers[si]);
-    const model = prov && prov.models.find(m => m.id === teamState.models[si]);
-    const provLabel = (!slot.fixed && teamState.providers[si])
-      ? teamState.providers[si] + ' · '
-      : '';
-    return '<div class="team-chip">' +
-      '<div class="team-chip-dot" style="background:' + slot.color + '"></div>' +
-      '<span style="color:var(--muted);margin-right:2px">' + slot.label + ':</span>' +
-      provLabel + (model ? model.name : '—') +
-      '</div>';
+    const prov = slot.fixed ? slot.providers[0] : slot.providers.find(p => p.name === state.providers[si]);
+    const model = prov?.models.find(m => m.id === state.models[si]);
+    const provLabel = slot.fixed ? '' : `${state.providers[si]} · `;
+    return `<div class="team-chip">
+      <div class="team-chip-dot" style="background:${slot.color}"></div>
+      <span style="color:var(--text-xs);margin-right:2px">${slot.label}:</span>
+      ${provLabel}${model?.name ?? '—'}
+    </div>`;
   });
   summary.innerHTML = chips.join('');
 }
 
-let ws = null;
-let currentRunId = null;
+/* ══════════════════ MODE TOGGLE ══════════════════ */
+document.getElementById('cfgMock').addEventListener('change', e => {
+  const live = e.target.value === 'false';
+  ['keyOpenai','keyAnthropic','keyCompat1','keyCompat2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.disabled = !live;
+    el.style.opacity = live ? 1 : 0.35;
+  });
+});
 
-// -- WebSocket --
+/* ══════════════════ TAB SWITCHING ══════════════════ */
+function switchTab(tab) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tab}`));
+}
+
+/* ══════════════════ WEBSOCKET ══════════════════ */
+let ws, currentRunId;
+
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${proto}//${location.host}/ws`);
-  ws.onopen = () => {
-    document.getElementById('wsStatus').innerHTML = '<span class="status-dot connected"></span> Connected';
-  };
-  ws.onclose = () => {
-    document.getElementById('wsStatus').innerHTML = '<span class="status-dot disconnected"></span> Reconnecting...';
-    setTimeout(connectWS, 2000);
-  };
-  ws.onmessage = (e) => {
-    const event = JSON.parse(e.data);
-    if (event.type !== 'pong') handleEvent(event);
-  };
+  ws.onopen = () => { document.getElementById('wsDot').classList.add('live'); document.getElementById('wsLabel').textContent = 'Live'; };
+  ws.onclose = () => { document.getElementById('wsDot').classList.remove('live'); document.getElementById('wsLabel').textContent = 'Reconnecting…'; setTimeout(connectWS, 2000); };
+  ws.onmessage = e => { const ev = JSON.parse(e.data); if (ev.type !== 'pong') handleEvent(ev); };
 }
 
-function handleEvent(event) {
-  const log = document.getElementById('eventLog');
-  const section = document.getElementById('progressSection');
-  section.style.display = 'block';
-
-  // Stage badges
-  if (event.type === 'stage_start') {
-    document.querySelectorAll('.stage-badge').forEach(b => b.classList.remove('active'));
-    const badge = document.querySelector(`[data-stage="${event.stage}"]`);
-    if (badge) badge.classList.add('active');
-    document.getElementById('progressStatus').textContent = event.message;
+function handleEvent(ev) {
+  document.getElementById('progressBlock').classList.add('visible');
+  const pills = { stage1:'pill1', stage2:'pill2', stage3:'pill3' };
+  if (ev.type === 'stage_start') {
+    Object.values(pills).forEach(id => document.getElementById(id).classList.remove('active'));
+    const p = pills[ev.stage]; if (p) document.getElementById(p).classList.add('active');
+    document.getElementById('progressSub').textContent = ev.message || ev.stage;
   }
-  if (event.type === 'stage_complete') {
-    const badge = document.querySelector(`[data-stage="${event.stage}"]`);
-    if (badge) { badge.classList.remove('active'); badge.classList.add('complete'); }
+  if (ev.type === 'stage_complete') {
+    const p = pills[ev.stage];
+    if (p) { const el = document.getElementById(p); el.classList.remove('active'); el.classList.add('done'); }
   }
-
-  // Progress bar
-  const prog = { stage1: 33, stage2: 66, stage3: 100 };
-  if (event.stage && prog[event.stage]) {
-    const pct = event.type.includes('complete') ? prog[event.stage] : prog[event.stage] - 15;
-    document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
-  }
-
-  if (event.type === 'pipeline_complete') {
-    document.getElementById('progressFill').style.width = '100%';
-    document.getElementById('progressStatus').textContent = 'Complete!';
+  const pct = { stage1_stage_start:5, stage1_stage_complete:33, stage2_stage_start:37, stage2_stage_complete:66, stage3_stage_start:70, stage3_stage_complete:100 };
+  const k = `${ev.stage}_${ev.type}`; if (pct[k]) document.getElementById('pbarFill').style.width = pct[k] + '%';
+  if (ev.type === 'step_complete') { const c = parseFloat(document.getElementById('pbarFill').style.width) || 0; document.getElementById('pbarFill').style.width = Math.min(c+1.5, 94) + '%'; }
+  if (ev.type === 'pipeline_complete') {
+    document.getElementById('pbarFill').style.width = '100%';
+    document.getElementById('progressSub').textContent = 'Complete ✓';
     document.getElementById('btnRun').disabled = false;
     document.getElementById('runStatus').textContent = '';
     if (currentRunId) loadResults(currentRunId);
+    loadRuns();
   }
-  if (event.type === 'pipeline_error') {
+  if (ev.type === 'pipeline_error') {
+    document.getElementById('progressSub').textContent = 'Error: ' + ev.message;
     document.getElementById('btnRun').disabled = false;
     document.getElementById('runStatus').textContent = '';
-    document.getElementById('progressStatus').textContent = 'Error: ' + event.message;
-    document.getElementById('progressStatus').style.color = 'var(--red)';
   }
+  appendEvent(ev);
+}
 
-  // Log entry
-  const ts = new Date(event.timestamp * 1000).toLocaleTimeString();
+function appendEvent(ev) {
+  const log = document.getElementById('eventLog');
+  const ts = new Date(ev.timestamp * 1000).toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   const div = document.createElement('div');
-  div.className = 'event';
-  const prov = (event.provider || '').toLowerCase();
-  const provTag = event.provider ? ` <span class="eprov" data-prov="${prov}">[${event.provider}]</span>` : '';
-  div.innerHTML = `<span class="ts">${ts}</span><span class="type">${event.type}</span>${event.message || ''}${provTag}`;
+  div.className = 'event-row';
+  div.innerHTML = `<span class="ets">${ts}</span><span class="etyp">${ev.type}</span><span class="emsg">${ev.message||''}</span>${ev.provider ? `<span class="eprov">[${ev.provider}]</span>` : ''}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
 }
 
-// -- API calls --
+/* ══════════════════ START RUN ══════════════════ */
 async function startRun() {
   const btn = document.getElementById('btnRun');
   btn.disabled = true;
-  document.getElementById('runStatus').textContent = 'Starting pipeline...';
-
-  // Reset progress
-  document.querySelectorAll('.stage-badge').forEach(b => b.classList.remove('active', 'complete'));
-  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('runStatus').textContent = 'Starting…';
+  ['pill1','pill2','pill3'].forEach(id => document.getElementById(id).classList.remove('active','done'));
+  document.getElementById('pbarFill').style.width = '0%';
   document.getElementById('eventLog').innerHTML = '';
-  document.getElementById('progressSection').style.display = 'block';
-  document.getElementById('progressStatus').textContent = 'Initializing...';
-  document.getElementById('progressStatus').style.color = '';
+  document.getElementById('progressBlock').classList.add('visible');
+  document.getElementById('progressSub').textContent = 'Initialising pipeline…';
 
   const useMock = document.getElementById('cfgMock').value === 'true';
 
@@ -979,77 +1112,69 @@ async function startRun() {
     max_iterations: parseInt(document.getElementById('cfgIter').value),
     ideas_per_provider: parseInt(document.getElementById('cfgIdeas').value),
     sector_focus: document.getElementById('cfgSector').value.trim(),
-    concurrency: 1,
-    retry_max: 3,
+    concurrency: 1, retry_max: 3,
+    deliberation_enabled: false,
     models: {
-      openai:    teamState.models[0],    // Slot 1 — locked OpenAI
-      anthropic: teamState.models[1],    // Slot 2 — locked Anthropic
-      deepseek:  teamState.models[2],    // Slot 3 — compat (configKey=deepseek)
-      gemini:    teamState.models[3],    // Slot 4 — compat (configKey=gemini)
+      openai:   state.models[0],
+      anthropic: state.models[1],
+      deepseek: state.models[2],
+      gemini:   state.models[3],
     },
+    // base_urls forwarded so server can pass them to run_pipeline (see bug spec)
     base_urls: {
-      slot3: teamState.baseUrls[2] || '',  // server reads slot3 key first
-      slot4: teamState.baseUrls[3] || '',  // server reads slot4 key first
+      deepseek: state.baseUrls[2] || '',
+      gemini:   state.baseUrls[3] || '',
     },
   };
 
-  config.deliberation_enabled = document.getElementById('cfgDeliberation').checked;
-
-  // Only send API keys in live mode
   if (!useMock) {
     config.api_keys = {
-      OPENAI_API_KEY: document.getElementById('keyOpenai').value,
-      ANTHROPIC_API_KEY: document.getElementById('keyAnthropic').value,
-      OPENAI_COMPAT_API_KEY: document.getElementById('keyDeepseek').value,
-      GEMINI_API_KEY: document.getElementById('keyGemini').value,
+      OPENAI_API_KEY:     document.getElementById('keyOpenai').value,
+      ANTHROPIC_API_KEY:  document.getElementById('keyAnthropic').value,
+      OPENAI_COMPAT_API_KEY: document.getElementById('keyCompat1').value,
+      GEMINI_API_KEY:     document.getElementById('keyCompat2').value,
     };
   }
 
   try {
-    const resp = await fetch('/api/runs', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(config),
-    });
+    const resp = await fetch('/api/runs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(config) });
     const data = await resp.json();
     currentRunId = data.run_id;
-    document.getElementById('runStatus').textContent = `Run ${data.run_id} started`;
-  } catch (err) {
+    document.getElementById('runStatus').textContent = data.run_id;
+  } catch(err) {
     btn.disabled = false;
-    document.getElementById('runStatus').textContent = 'Failed to start: ' + err.message;
+    document.getElementById('runStatus').textContent = 'Failed: ' + err.message;
   }
 }
 
+/* ══════════════════ LOAD RUNS ══════════════════ */
 async function loadRuns() {
   try {
     const resp = await fetch('/api/runs');
     const runs = await resp.json();
     const container = document.getElementById('runsList');
-    if (!runs.length) {
-      container.innerHTML = '<div class="empty"><h2>No runs yet</h2><p>Configure the control panel above and click "Launch Incubator".</p></div>';
-      return;
-    }
-    let html = '<table><thead><tr><th>Run</th><th>Status</th><th>Mode</th><th>Sector</th><th>Events</th><th>Started</th><th></th></tr></thead><tbody>';
-    for (const run of runs) {
-      const started = run.started_at ? new Date(run.started_at * 1000).toLocaleString() : '-';
+    if (!runs.length) { container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No runs yet</h3><p>Configure the panel above and click Launch.</p></div>`; return; }
+    let html = `<div class="card"><table class="data-table"><thead><tr><th>Run ID</th><th>Status</th><th>Mode</th><th>Sector</th><th>Events</th><th>Started</th><th></th></tr></thead><tbody>`;
+    for (const run of [...runs].reverse()) {
+      const started = run.started_at ? new Date(run.started_at * 1000).toLocaleString() : '—';
       const mode = run.config?.use_mock ? 'Mock' : 'Live';
-      const sector = run.config?.sector_focus || 'All';
-      const sc = run.status === 'complete' ? 'var(--green)' : run.status === 'error' ? 'var(--red)' : 'var(--yellow)';
+      const sector = run.config?.sector_focus || 'All sectors';
       html += `<tr>
-        <td style="font-weight:600">${run.run_id}</td>
-        <td style="color:${sc}">${run.status}${run.error ? ': ' + run.error.substring(0,50) : ''}</td>
-        <td>${mode}</td>
-        <td>${sector}</td>
-        <td>${run.event_count}</td>
-        <td>${started}</td>
-        <td>${run.status === 'complete' ? `<button class="secondary" onclick="loadResults('${run.run_id}')" style="padding:4px 12px;font-size:12px">View</button>` : ''}</td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${run.run_id}</td>
+        <td><span class="status-badge ${run.status}">${run.status}${run.error ? ': ' + run.error.substring(0,40) : ''}</span></td>
+        <td style="color:var(--text-dim)">${mode}</td>
+        <td style="color:var(--text-dim)">${sector}</td>
+        <td style="font-family:var(--font-mono);color:var(--text-xs)">${run.event_count}</td>
+        <td style="color:var(--text-xs);font-size:12px">${started}</td>
+        <td>${run.status === 'complete' ? `<button class="btn btn-ghost" onclick="loadResults('${run.run_id}')" style="padding:4px 12px;font-size:11px">View →</button>` : ''}</td>
       </tr>`;
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
   } catch(e) {}
 }
 
+/* ══════════════════ LOAD RESULTS ══════════════════ */
 async function loadResults(runId) {
   try {
     const resp = await fetch(`/api/runs/${runId}/results`);
@@ -1059,237 +1184,176 @@ async function loadResults(runId) {
     renderPlans(r.stage2_final_plans || []);
     renderPitches(r.stage3_pitches || [], r.stage3_decisions || []);
     renderPortfolio(r.portfolio_report || []);
-    loadRuns();
-    // Switch to portfolio tab
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector('[data-tab="portfolio"]').classList.add('active');
-    document.getElementById('tab-portfolio').classList.add('active');
+    switchTab('portfolio');
   } catch(e) {}
 }
 
+/* ══════════════════ RENDER ══════════════════ */
 function renderIdeas(ideas) {
   const el = document.getElementById('ideasContent');
-  if (!ideas.length) { el.innerHTML = '<div class="empty"><p>No ideas yet.</p></div>'; return; }
-  let html = '<div class="card-grid">';
+  if (!ideas.length) { el.innerHTML = emptyState('💡','No ideas','Run the pipeline to generate ideas.'); return; }
+  let html = '<div class="idea-grid">';
   for (const idea of ideas) {
-    html += `<div class="card">
-      <div class="provider">${idea.proposer_provider}</div>
-      <h3>${esc(idea.title)}</h3>
-      <p>${esc(idea.summary)}</p>
-      <p><strong>Target:</strong> ${esc(idea.target_customer)}</p>
-      <p><strong>Why now:</strong> ${esc(idea.why_now)}</p>
-      <p><strong>Market:</strong> ${esc(idea.market_size_estimate)}</p>
-      <p><strong>Moat:</strong> ${esc(idea.unfair_advantage)}</p>
+    const prov = (idea.proposer_provider || '').toLowerCase();
+    html += `<div class="idea-card">
+      <div class="idea-top">
+        <div class="idea-title">${esc(idea.title)}</div>
+        <span class="provider-badge ${prov}">${esc(idea.proposer_provider)}</span>
+      </div>
+      <p class="idea-summary">${esc(idea.summary)}</p>
+      <div class="idea-details">
+        <div class="idea-drow"><span class="idea-dlabel">Target</span><span class="idea-dval">${esc(idea.target_customer)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Why now</span><span class="idea-dval">${esc(idea.why_now)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Market</span><span class="idea-dval">${esc(idea.market_size_estimate)}</span></div>
+        <div class="idea-drow"><span class="idea-dlabel">Moat</span><span class="idea-dval">${esc(idea.unfair_advantage)}</span></div>
+      </div>
     </div>`;
   }
-  html += '</div>';
-  el.innerHTML = html;
+  el.innerHTML = html + '</div>';
 }
 
 function renderPlans(plans) {
   const el = document.getElementById('plansContent');
-  if (!plans.length) { el.innerHTML = '<div class="empty"><p>No plans yet.</p></div>'; return; }
-  let html = '';
+  if (!plans.length) { el.innerHTML = emptyState('📐','No plans','Plans appear after Stage 2.'); return; }
+  let html = '<div class="plan-accordion">';
   for (const p of plans) {
-    html += `<details>
-      <summary><strong>${esc(p.founder_provider)}</strong> -- ${esc(p.idea_id)}</summary>
-      <div class="content">
-        <h4>Problem</h4><p>${esc(p.problem)}</p>
-        <h4>Solution</h4><p>${esc(p.solution)}</p>
-        <h4>Market</h4><p>TAM: ${esc(p.market?.tam)} | SAM: ${esc(p.market?.sam)} | SOM: ${esc(p.market?.som)}<br>Growth: ${esc(p.market?.growth_rate)}<br>${esc(p.market?.reasoning)}</p>
-        <h4>Business Model</h4><p>${esc(p.business_model?.revenue_model)}<br>Pricing: ${esc(p.business_model?.pricing)}<br>Unit Economics: ${esc(p.business_model?.unit_economics)}</p>
-        <h4>Go-to-Market</h4><p>${esc(p.go_to_market)}</p>
-        <h4>Competitive Landscape</h4>
-        ${(p.competitive_landscape||[]).map(c=>`<p><strong>${esc(c.competitor)}:</strong> Strength: ${esc(c.strength)} | Weakness: ${esc(c.weakness)} | Our edge: ${esc(c.our_advantage)}</p>`).join('')}
-        <h4>Risks & Mitigations</h4>
-        ${(p.risks_and_mitigations||[]).map(r=>`<p><span class="tag ${r.severity==='critical'||r.severity==='high'?'pass':'invest'}">${r.severity}</span> ${esc(r.risk)} -- ${esc(r.mitigation)}</p>`).join('')}
-        <h4>12-Month Roadmap</h4><p>${esc(p.twelve_month_roadmap)}</p>
-        <h4>Funding Ask</h4><p>${esc(p.funding_ask?.amount)}<br>Use: ${esc(p.funding_ask?.use_of_funds)}<br>Targets: ${esc(p.funding_ask?.target_metrics)}</p>
+    const prov = (p.founder_provider || '').toLowerCase();
+    const comps = (p.competitive_landscape || []).map(c => `<div class="competitor-row"><div class="competitor-name">${esc(c.competitor)}</div><div class="competitor-meta"><div class="competitor-fact"><strong>Strength</strong>${esc(c.strength)}</div><div class="competitor-fact"><strong>Weakness</strong>${esc(c.weakness)}</div><div class="competitor-fact" style="grid-column:1/-1"><strong>Our edge</strong>${esc(c.our_advantage)}</div></div></div>`).join('');
+    const risks = (p.risks_and_mitigations || []).map(r => `<div class="risk-row"><span class="risk-badge ${r.severity}">${r.severity}</span><div class="risk-text">${esc(r.risk)} — <em>${esc(r.mitigation)}</em></div></div>`).join('');
+    html += `<details class="plan-item">
+      <summary>
+        <div class="plan-chevron"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="plan-summary-text">
+          <strong><span class="provider-badge ${prov}" style="margin-right:8px">${esc(p.founder_provider)}</span>${esc(p.idea_id)}</strong>
+          <span>${esc((p.problem||'').substring(0,90))}…</span>
+        </div>
+      </summary>
+      <div class="plan-body">
+        <div class="plan-sec full"><h4>Problem</h4><p>${esc(p.problem)}</p></div>
+        <div class="plan-sec full"><h4>Solution</h4><p>${esc(p.solution)}</p></div>
+        <div class="plan-sec">
+          <h4>Market</h4>
+          <div class="market-grid">
+            <div class="market-cell"><div class="market-cell-label">TAM</div><div class="market-cell-val">${esc(p.market?.tam)}</div></div>
+            <div class="market-cell"><div class="market-cell-label">SAM</div><div class="market-cell-val">${esc(p.market?.sam)}</div></div>
+            <div class="market-cell"><div class="market-cell-label">SOM</div><div class="market-cell-val">${esc(p.market?.som)}</div></div>
+          </div>
+          <p style="font-size:11px;color:var(--text-xs)">${esc(p.market?.reasoning)}</p>
+        </div>
+        <div class="plan-sec">
+          <h4>Business Model</h4>
+          <p><strong>${esc(p.business_model?.revenue_model)}</strong><br>${esc(p.business_model?.pricing)}<br>${esc(p.business_model?.unit_economics)}</p>
+        </div>
+        <div class="plan-sec full"><h4>Go-to-Market</h4><p>${esc(p.go_to_market)}</p></div>
+        <div class="plan-sec"><h4>Competitive Landscape</h4><div class="competitor-list">${comps}</div></div>
+        <div class="plan-sec"><h4>Risks &amp; Mitigations</h4><div class="risk-list">${risks}</div></div>
+        <div class="plan-sec full"><h4>12-Month Roadmap</h4><p>${esc(p.twelve_month_roadmap)}</p></div>
+        <div class="plan-sec full"><h4>Funding Ask</h4><p><strong>${esc(p.funding_ask?.amount)}</strong> — ${esc(p.funding_ask?.proposed_valuation)}<br>${esc(p.funding_ask?.use_of_funds)}<br>Targets: ${esc(p.funding_ask?.target_metrics)}</p></div>
       </div>
     </details>`;
   }
-  el.innerHTML = html;
+  el.innerHTML = html + '</div>';
 }
 
 function renderPitches(pitches, decisions) {
   const el = document.getElementById('pitchesContent');
-  if (!pitches.length) { el.innerHTML = '<div class="empty"><p>No pitches yet.</p></div>'; return; }
-  let html = '<div class="card-grid">';
+  if (!pitches.length) { el.innerHTML = emptyState('🎤','No pitches yet','Pitches appear after Stage 3.'); return; }
+  let html = '<div class="pitch-grid">';
   for (const pitch of pitches) {
+    const prov = (pitch.founder_provider || '').toLowerCase();
     const dd = decisions.filter(d => d.idea_id === pitch.idea_id);
     const investN = dd.filter(d => d.decision === 'invest').length;
-    html += `<div class="card">
-      <div class="provider">${esc(pitch.founder_provider)}</div>
-      <h3>${esc(pitch.elevator_pitch)}</h3>
-      <p><strong>Problem/Solution:</strong> ${esc(pitch.problem_solution_fit?.substring(0,200))}...</p>
-      <p><strong>The Ask:</strong> ${esc(pitch.the_ask)}</p>
-      <p><strong>Why Now:</strong> ${esc(pitch.why_now)}</p>
-      <p><strong>5yr Vision:</strong> ${esc(pitch.five_year_vision)}</p>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-        <strong>Investors: ${investN}/${dd.length} invest</strong>
-        <div style="margin-top:8px">
-          ${dd.map(d=>`<div style="margin:4px 0"><span class="tag ${d.decision}">${d.decision.toUpperCase()}</span> <strong>${esc(d.investor_provider)}</strong> (${d.conviction_score}/10)${d.proposed_terms?` -- ${esc(d.proposed_terms.check_size)} @ ${esc(d.proposed_terms.valuation_range)}`:''}${d.pass_reasons?` -- ${esc(d.pass_reasons.substring(0,100))}`:''}</div>`).join('')}
+    const avgConv = dd.length ? (dd.reduce((s,d) => s + d.conviction_score, 0) / dd.length).toFixed(1) : '—';
+    const convCl = parseFloat(avgConv) >= 7 ? '#22c55e' : parseFloat(avgConv) >= 5 ? '#eab308' : '#ef4444';
+    html += `<div class="pitch-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+        <span class="provider-badge ${prov}">${esc(pitch.founder_provider)}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-xs)">${esc(pitch.idea_id)}</span>
+      </div>
+      <div class="pitch-elevator">${esc(pitch.elevator_pitch)}</div>
+      <div class="pitch-ask"><strong style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-xs)">The Ask</strong><br>${esc(pitch.the_ask)}</div>
+      <div class="investor-votes">
+        <div class="vote-header">
+          <span class="vote-header-label">${investN}/${dd.length} invest</span>
+          <span class="vote-score-big" style="color:${convCl}">${avgConv}</span>
         </div>
+        ${dd.map(d => `<div class="vote-row">
+          <span class="vote-dec ${d.decision}">${d.decision.toUpperCase()}</span>
+          <span class="vote-investor"><span class="provider-badge ${(d.investor_provider||'').toLowerCase()}">${esc(d.investor_provider)}</span></span>
+          <span class="vote-conv">${d.conviction_score}/10</span>
+        </div>${d.proposed_terms ? `<div style="padding:0 0 5px 70px;font-size:11px;color:var(--text-xs)">${esc(d.proposed_terms.check_size)} @ ${esc(d.proposed_terms.valuation_range)}</div>` : ''}`).join('')}
       </div>
     </div>`;
   }
-  html += '</div>';
-  el.innerHTML = html;
+  el.innerHTML = html + '</div>';
 }
 
 function renderPortfolio(report) {
   const el = document.getElementById('portfolioContent');
-  if (!report.length) { el.innerHTML = '<div class="empty"><p>No portfolio data yet.</p></div>'; return; }
-  let html = '<table><thead><tr><th>Rank</th><th>Founder</th><th>Idea</th><th>Elevator Pitch</th><th>Investors</th><th>Conviction</th><th>Ask</th></tr></thead><tbody>';
-  for (const row of report) {
-    const cc = row.avg_conviction >= 7 ? 'var(--green)' : row.avg_conviction >= 5 ? 'var(--yellow)' : 'var(--red)';
-    html += `<tr>
-      <td style="font-size:20px;font-weight:700;color:var(--accent)">#${row.rank}</td>
-      <td style="font-weight:600">${esc(row.founder)}</td>
-      <td style="color:var(--muted)">${esc(row.idea_id)}</td>
-      <td style="max-width:400px">${esc(row.elevator_pitch)}</td>
-      <td><strong>${row.investors_in}</strong>/${row.investors_total}</td>
-      <td style="color:${cc};font-weight:700;font-size:18px">${row.avg_conviction}</td>
-      <td>${esc(row.funding_ask)}</td>
+  if (!report.length) { el.innerHTML = emptyState('🏆','Portfolio pending','Ranked results appear once the pipeline completes.'); return; }
+  const topConv = Math.max(...report.map(r => parseFloat(r.avg_conviction) || 0));
+  let rows = '';
+  report.forEach(row => {
+    const rank = parseInt(row.rank);
+    const rankCl = rank <= 3 ? `rank-${rank}` : '';
+    const conv = parseFloat(row.avg_conviction) || 0;
+    const convColor = conv >= 7 ? '#22c55e' : conv >= 5 ? '#eab308' : '#ef4444';
+    const prov = (row.founder || '').toLowerCase();
+    const votesPct = row.investors_total > 0 ? Math.round((row.investors_in / row.investors_total) * 100) : 0;
+    const circ = 2 * Math.PI * 19, dash = (conv / 10) * circ;
+    rows += `<tr>
+      <td style="text-align:center"><div class="rank-num ${rankCl}">#${rank}</div></td>
+      <td>
+        <span class="provider-badge ${prov}">${esc(row.founder)}</span>
+        <br><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-xs);margin-top:3px;display:block">${esc(row.idea_id)}</span>
+      </td>
+      <td class="pitch-cell">${esc(row.elevator_pitch)}</td>
+      <td>
+        <div class="votes-fraction">${row.investors_in}<span style="color:var(--text-xs);font-size:12px">/${row.investors_total}</span></div>
+        <div class="votes-bar"><div class="votes-bar-fill" style="width:${votesPct}%"></div></div>
+      </td>
+      <td style="text-align:center">
+        <div class="conviction-ring">
+          <svg width="46" height="46" viewBox="0 0 46 46">
+            <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="3.5"/>
+            <circle cx="23" cy="23" r="19" fill="none" stroke="${convColor}" stroke-width="3.5"
+              stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
+          </svg>
+          <div class="val" style="color:${convColor}">${conv.toFixed(1)}</div>
+        </div>
+      </td>
+      <td class="ask-cell">${esc(row.funding_ask)}</td>
     </tr>`;
-  }
-  html += '</tbody></table>';
-  el.innerHTML = html;
+  });
+  el.innerHTML = `<div class="portfolio-hero">
+    <div class="portfolio-header">
+      <div>
+        <div class="portfolio-title">Portfolio Report</div>
+        <div class="portfolio-subtitle">Ranked by investor conviction · ${report.length} startup${report.length !== 1 ? 's' : ''} evaluated</div>
+      </div>
+      <div class="portfolio-meta"><span>Peak conviction</span><strong>${topConv.toFixed(1)}/10</strong></div>
+    </div>
+    <div class="portfolio-table-wrap">
+      <table class="portfolio-table">
+        <thead><tr><th>Rank</th><th>Founder</th><th>Elevator Pitch</th><th>Investors</th><th>Conviction</th><th>Ask</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
-function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function emptyState(icon, title, desc) {
+  return `<div class="empty-state"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${desc}</p></div>`;
+}
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-// Tabs
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-  });
-});
-
-// Toggle API key fields based on mode
-document.getElementById('cfgMock').addEventListener('change', (e) => {
-  const keySection = document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini');
-  const isLive = e.target.value === 'false';
-  keySection.forEach(el => { el.disabled = !isLive; el.style.opacity = isLive ? 1 : 0.4; });
-});
-// Initialize key fields as disabled (mock mode default)
-document.querySelectorAll('#keyOpenai, #keyAnthropic, #keyDeepseek, #keyGemini').forEach(el => {
-  el.disabled = true; el.style.opacity = 0.4;
-});
-
+/* ══════════════════ INIT ══════════════════ */
+buildUI();
 connectWS();
 loadRuns();
-loadCatalog();
-// Initialise team builder after DOM is ready
-buildTeamUI();
-
-// -- Model Catalog --
-let _catalogData = [];
-let _catalogFilter = 'all';
-
-async function loadCatalog() {
-  try {
-    const resp = await fetch('/api/catalog');
-    const data = await resp.json();
-    _catalogData = data.catalog || [];
-    renderCatalog();
-  } catch(e) {
-    document.getElementById('catalogContent').innerHTML = '<div class="empty"><p>Failed to load catalog.</p></div>';
-  }
-}
-
-function filterCatalog(tier, btn) {
-  _catalogFilter = tier;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderCatalog();
-}
-
-function renderCatalog() {
-  const el = document.getElementById('catalogContent');
-  const models = _catalogFilter === 'all' ? _catalogData : _catalogData.filter(m => m.tier === _catalogFilter);
-  if (!models.length) { el.innerHTML = '<div class="empty"><p>No models found.</p></div>'; return; }
-  let html = '<div class="catalog-grid">';
-  for (const m of models) {
-    const tier = m.tier || 'strong';
-    const roles = (m.best_roles || []).map(r => `<span class="role-tag">${esc(r)}</span>`).join('');
-    const strengths = (m.strengths || []).map(s => `<li>${esc(s)}</li>`).join('');
-    const weaknesses = (m.weaknesses || []).map(w => `<li>${esc(w)}</li>`).join('');
-    const ctx = m.context_window ? `<span style="font-size:11px;color:var(--muted)">Context: ${esc(String(m.context_window))}</span>` : '';
-    html += `<div class="catalog-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div>
-          <div class="model-id">${esc(m.id)}</div>
-          <div class="provider-name">${esc(m.provider)} &middot; ${esc(m.type || '')}</div>
-        </div>
-        <span class="tier-badge tier-${esc(tier)}">${esc(tier)}</span>
-      </div>
-      <div style="margin-bottom:8px">${roles} ${ctx}</div>
-      <div class="pricing">
-        <div class="price-item"><span class="price-label">Input / 1M</span><span class="price-val">$${m.pricing?.input ?? '?'}</span></div>
-        <div class="price-item"><span class="price-label">Output / 1M</span><span class="price-val">$${m.pricing?.output ?? '?'}</span></div>
-        <div class="price-item"><span class="price-label">Est. Run Cost</span><span class="price-val" id="est-${esc(m.id.replace(/[^a-z0-9]/gi,'_'))}">--</span></div>
-      </div>
-      ${strengths ? `<div style="font-size:11px;color:var(--accent);font-weight:600;margin-top:8px">STRENGTHS</div><ul>${strengths}</ul>` : ''}
-      ${weaknesses ? `<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:6px">WEAKNESSES</div><ul>${weaknesses}</ul>` : ''}
-    </div>`;
-  }
-  html += '</div>';
-  el.innerHTML = html;
-  // Fetch per-model cost estimates
-  const ids = models.map(m => m.id);
-  fetch('/api/estimate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({model_ids: ids}) })
-    .then(r => r.json())
-    .then(est => {
-      for (const [id, info] of Object.entries(est.per_model || {})) {
-        const key = id.replace(/[^a-z0-9]/gi,'_');
-        const el2 = document.getElementById('est-' + key);
-        if (el2) el2.textContent = '$' + info.estimated_cost_usd;
-      }
-    })
-    .catch(() => {});
-}
-
-// -- Cost Estimator --
-async function runEstimate() {
-  const modelIds = [
-    teamState.models[0],
-    teamState.models[1],
-    teamState.models[2],
-    teamState.models[3],
-  ];
-  try {
-    const resp = await fetch('/api/estimate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({model_ids: modelIds}),
-    });
-    const est = await resp.json();
-    const box = document.getElementById('estimateResult');
-    let rows = '';
-    for (const [id, info] of Object.entries(est.per_model || {})) {
-      rows += `<div class="estimate-row"><span>${esc(id)}</span><span style="font-weight:600">$${info.estimated_cost_usd}</span></div>`;
-    }
-    if (est.skipped_models?.length) {
-      rows += `<div class="estimate-row" style="color:var(--muted)"><span>Not in catalog (skipped)</span><span>${est.skipped_models.join(', ')}</span></div>`;
-    }
-    box.style.display = 'block';
-    box.innerHTML = `<div class="estimate-box">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div><div class="total">$${est.total_estimated_cost_usd}</div><div class="sub">Estimated total — ${(est.total_tokens/1000).toFixed(0)}K tokens across all models</div></div>
-        <span style="font-size:11px;color:var(--muted)">Based on average call profiles</span>
-      </div>
-      <div style="margin-top:12px">${rows}</div>
-    </div>`;
-  } catch(e) {
-    document.getElementById('estimateResult').innerHTML = '<div class="key-warning">Failed to fetch estimate.</div>';
-    document.getElementById('estimateResult').style.display = 'block';
-  }
-}
 </script>
 </body>
 </html>
