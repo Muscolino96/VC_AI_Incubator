@@ -374,7 +374,7 @@ def run_stage1(
             f"different angles, business models, and customer segments within {sector_focus}.\n"
         )
 
-    for provider in founders:
+    def idea_gen_task(provider: BaseProvider) -> tuple[str, list[dict[str, Any]]]:
         prompt = idea_prompt.format(
             provider_name=provider.name,
             ideas_count=ideas_per_provider,
@@ -387,17 +387,18 @@ def run_stage1(
         idea_items = payload.get("ideas")
         if not isinstance(idea_items, list):
             raise ValueError(f"Idea generation ({provider.name}) did not return an ideas list.")
-
         for item in idea_items:
             validate_schema(item, IDEA_CARD_SCHEMA, f"idea card ({provider.name})")
-
-        all_ideas[provider.name] = idea_items
         logger.info("  %s generated %d ideas", provider.name, len(idea_items))
         emit(PipelineEvent(
             type=EventType.STEP_COMPLETE, stage="stage1", step="ideas",
             provider=provider.name, message=f"Generated {len(idea_items)} ideas",
             data={"ideas": idea_items},
         ))
+        return provider.name, idea_items
+
+    for name, items in _map_concurrently(idea_gen_task, founders, concurrency):
+        all_ideas[name] = items
 
     # Flatten for output
     flat_ideas = [idea for ideas in all_ideas.values() for idea in ideas]
@@ -438,20 +439,17 @@ def run_stage1(
     _write_jsonl(run_dir / "stage1_feedback.jsonl", all_feedback)
     logger.info("  Collected %d feedback items", len(all_feedback))
 
-    # --- Step 1c: Each founder selects best idea ---
+    # --- Step 1c: Each founder selects best idea (parallel) ---
     logger.info("Step 1c: Founders select best idea")
     selections: dict[str, dict[str, Any]] = {}
 
-    for provider in founders:
+    def selection_task(provider: BaseProvider) -> tuple[str, dict[str, Any]]:
         my_ideas = all_ideas[provider.name]
         my_idea_ids = {idea["idea_id"] for idea in my_ideas}
         my_feedback = [f for f in all_feedback if f["idea_id"] in my_idea_ids]
-
-        # Group feedback by idea for readability
         feedback_by_idea: dict[str, list[dict[str, Any]]] = {}
         for fb in my_feedback:
             feedback_by_idea.setdefault(fb["idea_id"], []).append(fb)
-
         prompt = select_prompt.format(
             provider_name=provider.name,
             ideas_json=json.dumps(my_ideas, indent=2),
@@ -463,10 +461,11 @@ def run_stage1(
             context=f"selection ({provider.name})", max_retries=retry_max,
             system=select_system,
         )
-        selections[provider.name] = result
-        logger.info(
-            "  %s selected idea: %s", provider.name, result["selected_idea_id"]
-        )
+        logger.info("  %s selected idea: %s", provider.name, result["selected_idea_id"])
+        return provider.name, result
+
+    for name, result in _map_concurrently(selection_task, founders, concurrency):
+        selections[name] = result
 
     _write_jsonl(run_dir / "stage1_selections.jsonl", list(selections.values()))
     emit(PipelineEvent(
