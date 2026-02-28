@@ -733,6 +733,8 @@ def run_pipeline(
     resume_dir: Path | None = None,
     roles_config: dict[str, Any] | None = None,
     deliberation_enabled: bool = False,
+    slot3_base_url: str = "https://api.deepseek.com/v1",
+    slot4_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai",
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
@@ -765,14 +767,14 @@ def run_pipeline(
                 OpenAICompatibleChat(
                     name="deepseek",
                     model=models.get("deepseek") or os.getenv("DEEPSEEK_MODEL", "deepseek-reasoner"),
-                    base_url=os.getenv("DEEPSEEK_BASE_URL"),
+                    base_url=slot3_base_url,
                     api_key=api_keys.get("DEEPSEEK_API_KEY"),
                 ),
                 OpenAICompatibleChat(
                     name="gemini",
                     api_key_env=os.getenv("GEMINI_API_KEY_ENV", "GEMINI_API_KEY"),
                     model=models.get("gemini") or os.getenv("GEMINI_MODEL", "gemini-3-pro-preview"),
-                    base_url=os.getenv("GEMINI_BASE_URL"),
+                    base_url=slot4_base_url,
                     api_key=api_keys.get("GEMINI_API_KEY"),
                 ),
             ]

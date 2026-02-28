@@ -114,6 +114,17 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
         _runs[run_id]["started_at"] = time.time()
 
     sector = config.get("sector_focus", "")
+    base_urls = config.get("base_urls", {})
+    slot3_base_url = (
+        base_urls.get("slot3")
+        or base_urls.get("deepseek")
+        or os.getenv("SLOT3_BASE_URL", "https://api.deepseek.com/v1")
+    )
+    slot4_base_url = (
+        base_urls.get("slot4")
+        or base_urls.get("gemini")
+        or os.getenv("SLOT4_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
+    )
 
     try:
         run_dir = run_pipeline(
@@ -126,6 +137,8 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             deliberation_enabled=config.get("deliberation_enabled", False),
             emit=emit,
             provider_config=config,
+            slot3_base_url=slot3_base_url,
+            slot4_base_url=slot4_base_url,
         )
         with _runs_lock:
             _runs[run_id]["status"] = "complete"
