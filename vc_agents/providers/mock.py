@@ -233,7 +233,7 @@ class MockProvider(BaseProvider):
             "idea_id": idea_id,
             "reviewer_provider": self.name,
             "advisor_role": role,
-            "readiness_score": 7,
+            "readiness_score": 8,
             "issues": [
                 "Unit economics assume 3-year retention but no data supports this yet.",
                 "Competitive analysis missing newer AI-native entrants in the space.",
