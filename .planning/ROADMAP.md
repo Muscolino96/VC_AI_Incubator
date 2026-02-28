@@ -155,7 +155,11 @@ Plans:
   3. The dashboard displays a live cost counter that updates as step events arrive during a run
   4. `--budget 0.50` stops the pipeline gracefully after the current step when the running total exceeds $0.50, saves a checkpoint, and prints a clear budget-exceeded message
   5. After every run (completed or budget-stopped), `cost_report.json` is written alongside `token_usage.json` with per-provider and total cost breakdown
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Create CostTracker module, integrate into run_pipeline (running total + budget enforcement + cost_report.json + CLI flag + server.py wiring) (COST-01, COST-02, COST-04, COST-05)
+- [ ] 09-02-PLAN.md — Add live cost counter to dashboard, write TestCostTracker test suite (COST-03, COST-01, COST-02, COST-04, COST-05)
 
 ## Progress
 
@@ -171,4 +175,4 @@ Plans:
 | 6. Dynamic Provider Count | 2/2 | Complete | 2026-02-28 |
 | 7. Rich Real-time UX | 3/3 | Complete | 2026-02-28 |
 | 8. Native JSON Mode | 1/1 | Complete | 2026-02-28 |
-| 9. Live Cost Tracking | 0/TBD | Not started | - |
+| 9. Live Cost Tracking | 0/2 | Not started | - |
