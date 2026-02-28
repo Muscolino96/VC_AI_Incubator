@@ -53,7 +53,10 @@ class TestPipelineMock:
         )
 
         ideas = _read_jsonl(run_dir / "stage1_ideas.jsonl")
-        assert len(ideas) == 20  # 4 providers x 5 ideas
+        # MockProvider always returns 5 ideas regardless of ideas_count in prompt
+        MOCK_IDEAS_PER_PROVIDER = 5
+        NUM_PROVIDERS = 4
+        assert len(ideas) == NUM_PROVIDERS * MOCK_IDEAS_PER_PROVIDER
 
     def test_feedback_count(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -64,8 +67,11 @@ class TestPipelineMock:
         )
 
         feedback = _read_jsonl(run_dir / "stage1_feedback.jsonl")
-        # 20 ideas x 3 reviewers each = 60 feedback items
-        assert len(feedback) == 60
+        # 20 ideas x (4 providers - 1 self) reviewers each = 60
+        MOCK_IDEAS_PER_PROVIDER = 5
+        NUM_PROVIDERS = 4
+        expected_feedback = NUM_PROVIDERS * MOCK_IDEAS_PER_PROVIDER * (NUM_PROVIDERS - 1)
+        assert len(feedback) == expected_feedback
 
     def test_selections_count(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -76,7 +82,7 @@ class TestPipelineMock:
         )
 
         selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
-        assert len(selections) == 4  # one per provider
+        assert len(selections) == 4  # one per founder (4 mock providers)
 
     def test_portfolio_report_has_all_founders(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -89,9 +95,10 @@ class TestPipelineMock:
         import csv
         with (run_dir / "portfolio_report.csv").open(encoding="utf-8", newline="") as f:
             report = list(csv.DictReader(f))
-        assert len(report) == 4
+        expected_founders = {"openai", "anthropic", "deepseek", "gemini"}
+        assert len(report) == len(expected_founders)
         founders = {row["founder"] for row in report}
-        assert founders == {"openai", "anthropic", "deepseek", "gemini"}
+        assert founders == expected_founders
 
     def test_investor_decisions_count(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -102,8 +109,10 @@ class TestPipelineMock:
         )
 
         decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
-        # 4 pitches x 3 investors each = 12 decisions
-        assert len(decisions) == 12
+        # 4 founders pitch x 3 investors each (all providers except self)
+        NUM_PROVIDERS = 4
+        expected_decisions = NUM_PROVIDERS * (NUM_PROVIDERS - 1)
+        assert len(decisions) == expected_decisions
 
 
     def test_concurrent_stage2_all_founders_complete(self, tmp_path, monkeypatch):
@@ -114,7 +123,7 @@ class TestPipelineMock:
             max_iterations=2, ideas_per_provider=2,
         )
         plans = _read_jsonl(run_dir / "stage2_final_plans.jsonl")
-        assert len(plans) == 4
+        assert len(plans) == 4  # 4 mock providers — all should complete
         founder_names = {p["founder_provider"] for p in plans}
         assert founder_names == {"openai", "anthropic", "deepseek", "gemini"}
         # Each founder should have written at least a v0 plan file
@@ -129,7 +138,7 @@ class TestPipelineMock:
             max_iterations=1, ideas_per_provider=2,
         )
         selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
-        assert len(selections) == 4
+        assert len(selections) == 4  # 4 mock providers — all should complete
         founder_names = {s["founder_provider"] for s in selections}
         assert founder_names == {"openai", "anthropic", "deepseek", "gemini"}
 

@@ -908,12 +908,13 @@ def run_pipeline(
     roles_config: dict[str, Any] | None = None,
     deliberation_enabled: bool = False,
     skip_preflight: bool = False,
+    mock_providers: list[BaseProvider] | None = None,
     slot3_base_url: str = "https://api.deepseek.com/v1",
     slot4_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai",
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
-        providers: list[BaseProvider] = [
+        providers: list[BaseProvider] = mock_providers if mock_providers is not None else [
             MockProvider("openai"),
             MockProvider("anthropic"),
             MockProvider("deepseek"),
