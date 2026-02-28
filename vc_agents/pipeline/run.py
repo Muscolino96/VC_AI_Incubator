@@ -14,6 +14,7 @@ import sys
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -33,6 +34,7 @@ from vc_agents.providers.base import BaseProvider, ProviderError, extract_json
 from vc_agents.pipeline.report import build_portfolio_report, write_report_csv
 from vc_agents.schemas import (
     ADVISOR_REVIEW_SCHEMA,
+    DELIBERATION_SCHEMA,
     FEEDBACK_SCHEMA,
     IDEA_CARD_SCHEMA,
     INVESTOR_DECISION_SCHEMA,
@@ -119,6 +121,65 @@ ADVISOR_ROLES = [
         ),
     },
 ]
+
+
+# ---------------------------------------------------------------------------
+# Role Assignment
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RoleAssignment:
+    """Maps pipeline roles to specific providers."""
+
+    founders: list[BaseProvider]
+    advisors: list[BaseProvider]
+    investors: list[BaseProvider]
+
+    @classmethod
+    def from_config(
+        cls,
+        providers: list[BaseProvider],
+        roles_config: dict[str, list[str]] | None,
+    ) -> "RoleAssignment":
+        """Build role assignment from config, or default to all-do-everything."""
+        by_name = {p.name: p for p in providers}
+
+        if not roles_config:
+            return cls(
+                founders=list(providers),
+                advisors=list(providers),
+                investors=list(providers),
+            )
+
+        def resolve(role: str) -> list[BaseProvider]:
+            names = roles_config.get(role, [])
+            resolved = []
+            for name in names:
+                if name not in by_name:
+                    raise ValueError(
+                        f"Role '{role}' references unknown provider '{name}'. "
+                        f"Available: {list(by_name.keys())}"
+                    )
+                resolved.append(by_name[name])
+            if not resolved:
+                raise ValueError(f"Role '{role}' has no providers assigned.")
+            return resolved
+
+        return cls(
+            founders=resolve("founders"),
+            advisors=resolve("advisors"),
+            investors=resolve("investors"),
+        )
+
+    def validate(self) -> None:
+        """Warn if configuration looks unusual."""
+        founder_names = {p.name for p in self.founders}
+        advisor_names = {p.name for p in self.advisors}
+        if founder_names == advisor_names:
+            logger.warning(
+                "founders and advisors are the same set of models — no cross-perspective"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +315,7 @@ def run_stage1(
     run_dir: Path,
     sector_focus: str = "",
     emit: EventCallback = noop_callback,
+    roles: RoleAssignment | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Each founder proposes ideas, gets cross-feedback, picks the best one.
 
@@ -266,8 +328,12 @@ def run_stage1(
     feedback_system, feedback_prompt = load_prompt_pair("feedback_prompt.txt")
     select_system, select_prompt = load_prompt_pair("select_prompt.txt")
 
+    founders = roles.founders if roles is not None else providers
+    advisors = roles.advisors if roles is not None else providers
+    founder_names = {p.name for p in founders}
+
     # --- Step 1a: Generate ideas ---
-    logger.info("Step 1a: Generating ideas (%d providers x %d ideas)", len(providers), ideas_per_provider)
+    logger.info("Step 1a: Generating ideas (%d founders x %d ideas)", len(founders), ideas_per_provider)
     all_ideas: dict[str, list[dict[str, Any]]] = {}  # provider_name -> [idea_cards]
 
     # Build sector focus instruction
@@ -279,7 +345,7 @@ def run_stage1(
             f"different angles, business models, and customer segments within {sector_focus}.\n"
         )
 
-    for provider in providers:
+    for provider in founders:
         prompt = idea_prompt.format(
             provider_name=provider.name,
             ideas_count=ideas_per_provider,
@@ -309,7 +375,10 @@ def run_stage1(
     _write_jsonl(run_dir / "stage1_ideas.jsonl", flat_ideas)
 
     # --- Step 1b: Cross-feedback ---
-    logger.info("Step 1b: Cross-feedback (each idea reviewed by other %d models)", len(providers) - 1)
+    logger.info(
+        "Step 1b: Cross-feedback (%d founders' ideas reviewed by %d advisors)",
+        len(founders), len(advisors),
+    )
     all_feedback: list[dict[str, Any]] = []
 
     def feedback_task(task: dict[str, Any]) -> dict[str, Any]:
@@ -330,9 +399,11 @@ def run_stage1(
     tasks = []
     for provider_name, ideas in all_ideas.items():
         for idea in ideas:
-            for reviewer in providers:
-                if reviewer.name != provider_name:
-                    tasks.append({"idea": idea, "reviewer": reviewer})
+            for reviewer in advisors:
+                # Skip self-review only if this advisor is also the founder
+                if reviewer.name == provider_name and provider_name in founder_names:
+                    continue
+                tasks.append({"idea": idea, "reviewer": reviewer})
 
     all_feedback = list(_map_concurrently(feedback_task, tasks, concurrency))
     _write_jsonl(run_dir / "stage1_feedback.jsonl", all_feedback)
@@ -342,7 +413,7 @@ def run_stage1(
     logger.info("Step 1c: Founders select best idea")
     selections: dict[str, dict[str, Any]] = {}
 
-    for provider in providers:
+    for provider in founders:
         my_ideas = all_ideas[provider.name]
         my_idea_ids = {idea["idea_id"] for idea in my_ideas}
         my_feedback = [f for f in all_feedback if f["idea_id"] in my_idea_ids]
@@ -389,6 +460,8 @@ def run_stage2(
     max_iterations: int,
     run_dir: Path,
     emit: EventCallback = noop_callback,
+    roles: RoleAssignment | None = None,
+    deliberation_enabled: bool = False,
 ) -> dict[str, dict[str, Any]]:
     """Each founder builds a plan; advisors review; founders iterate until ready.
 
@@ -400,11 +473,14 @@ def run_stage2(
     build_system, build_prompt = load_prompt_pair("build_prompt.txt")
     advisor_system, advisor_prompt = load_prompt_pair("advisor_review_prompt.txt")
     iterate_system, iterate_prompt = load_prompt_pair("iterate_prompt.txt")
+    deliberation_system, deliberation_user = load_prompt_pair("deliberation_prompt.txt")
+
+    founders_list = roles.founders if roles is not None else providers
 
     final_plans: dict[str, dict[str, Any]] = {}
     all_reviews: list[dict[str, Any]] = []
 
-    for founder in providers:
+    for founder in founders_list:
         selection = selections[founder.name]
         idea = selection["refined_idea"]
         idea_id = idea["idea_id"]
@@ -427,8 +503,9 @@ def run_stage2(
         for round_num in range(1, max_iterations + 1):
             logger.info("  Round %d/%d for %s", round_num, max_iterations, founder.name)
 
-            # Advisors review
-            advisors = [p for p in providers if p.name != founder.name]
+            # Advisors review — all role-assigned advisors except the founder themselves
+            advisors_pool = roles.advisors if roles is not None else providers
+            advisors = [a for a in advisors_pool if a.name != founder.name]
             round_reviews: list[dict[str, Any]] = []
 
             for i, advisor in enumerate(advisors):
@@ -477,9 +554,36 @@ def run_stage2(
                 round_reviews,
             )
 
+            # Deliberation (opt-in): lead advisor synthesizes all reviews into one briefing
+            if deliberation_enabled and advisors:
+                lead = advisors[round_num % len(advisors)]
+                delib_prompt = deliberation_user.format(
+                    reviews_json=json.dumps(round_reviews, indent=2),
+                    provider_name=lead.name,
+                )
+                deliberation = retry_json_call(
+                    lead, delib_prompt, schema=DELIBERATION_SCHEMA,
+                    context=f"deliberation ({lead.name}/{idea_id}/round{round_num})",
+                    max_retries=retry_max,
+                    system=deliberation_system,
+                )
+                _write_jsonl(
+                    run_dir / f"stage2_{founder.name}_deliberation_round{round_num}.jsonl",
+                    [deliberation],
+                )
+                all_ready = deliberation["overall_readiness"]
+                avg_score = deliberation["avg_score"]
+                # Token-efficient: pass compressed summary (~500 tokens) instead of raw reviews (~4500)
+                reviews_for_founder = json.dumps(deliberation, indent=2)
+            else:
+                all_ready = all(r.get("ready_for_pitch", False) for r in round_reviews)
+                avg_score = (
+                    sum(r["readiness_score"] for r in round_reviews) / len(round_reviews)
+                    if round_reviews else 0.0
+                )
+                reviews_for_founder = json.dumps(round_reviews, indent=2)
+
             # Check convergence
-            all_ready = all(r.get("ready_for_pitch", False) for r in round_reviews)
-            avg_score = sum(r["readiness_score"] for r in round_reviews) / len(round_reviews)
             logger.info(
                 "    Avg readiness: %.1f | All ready: %s",
                 avg_score, all_ready,
@@ -500,12 +604,12 @@ def run_stage2(
                 logger.info("    Max iterations reached. Proceeding to pitch anyway.")
                 break
 
-            # Founder iterates
+            # Founder iterates (uses deliberation summary when deliberation is enabled)
             prompt = iterate_prompt.format(
                 provider_name=founder.name,
                 round_number=round_num,
                 plan_json=json.dumps(plan, indent=2),
-                reviews_json=json.dumps(round_reviews, indent=2),
+                reviews_json=reviews_for_founder,
             )
             plan = retry_json_call(
                 founder, prompt, schema=STARTUP_PLAN_SCHEMA,
@@ -538,6 +642,7 @@ def run_stage3(
     concurrency: int,
     run_dir: Path,
     emit: EventCallback = noop_callback,
+    roles: RoleAssignment | None = None,
 ) -> list[dict[str, Any]]:
     """Each founder pitches; other models evaluate as investors.
 
@@ -549,10 +654,13 @@ def run_stage3(
     pitch_system, pitch_prompt_tmpl = load_prompt_pair("pitch_prompt.txt")
     investor_system, investor_prompt_tmpl = load_prompt_pair("investor_eval_prompt.txt")
 
+    founders_list = roles.founders if roles is not None else providers
+    investors_pool = roles.investors if roles is not None else providers
+
     all_pitches: list[dict[str, Any]] = []
     all_decisions: list[dict[str, Any]] = []
 
-    for founder in providers:
+    for founder in founders_list:
         plan = final_plans[founder.name]
         idea_id = plan["idea_id"]
         logger.info("  %s preparing pitch for %s", founder.name, idea_id)
@@ -569,8 +677,8 @@ def run_stage3(
         )
         all_pitches.append(pitch)
 
-        # Investors evaluate
-        investors = [p for p in providers if p.name != founder.name]
+        # Investors evaluate — all role-assigned investors except the founder
+        investors = [p for p in investors_pool if p.name != founder.name]
         for investor in investors:
             prompt = investor_prompt_tmpl.format(
                 provider_name=investor.name,
@@ -598,7 +706,7 @@ def run_stage3(
     _write_jsonl(run_dir / "stage3_decisions.jsonl", all_decisions)
 
     # Build portfolio report
-    report = build_portfolio_report(providers, all_pitches, all_decisions, final_plans)
+    report = build_portfolio_report(founders_list, all_pitches, all_decisions, final_plans)
     write_report_csv(report, run_dir / "portfolio_report.csv")
     logger.info("Portfolio report saved to %s", run_dir / "portfolio_report.csv")
 
@@ -620,6 +728,8 @@ def run_pipeline(
     emit: EventCallback = noop_callback,
     provider_config: dict[str, Any] | None = None,
     resume_dir: Path | None = None,
+    roles_config: dict[str, Any] | None = None,
+    deliberation_enabled: bool = False,
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
@@ -629,6 +739,7 @@ def run_pipeline(
             MockProvider("deepseek"),
             MockProvider("gemini"),
         ]
+        yaml_config: dict[str, Any] = {}
     else:
         yaml_config = _load_config()
         if yaml_config.get("providers"):
@@ -663,6 +774,22 @@ def run_pipeline(
                 ),
             ]
 
+    # Build role assignment: CLI override > YAML roles > default (all do everything)
+    effective_roles_config = roles_config or yaml_config.get("roles")
+    # Also merge deliberation flag from YAML if not set via CLI
+    effective_deliberation = deliberation_enabled or bool(
+        yaml_config.get("pipeline", {}).get("deliberation", False)
+    )
+    roles = RoleAssignment.from_config(providers, effective_roles_config)
+    roles.validate()
+    logger.info(
+        "Role assignment: founders=%s advisors=%s investors=%s deliberation=%s",
+        [p.name for p in roles.founders],
+        [p.name for p in roles.advisors],
+        [p.name for p in roles.investors],
+        effective_deliberation,
+    )
+
     if resume_dir:
         run_dir = resume_dir
         checkpoint = _load_checkpoint(run_dir)
@@ -674,9 +801,16 @@ def run_pipeline(
     logger.info("Pipeline output: %s", run_dir)
     emit(PipelineEvent(
         type=EventType.PIPELINE_START, message="Pipeline started",
-        data={"run_dir": str(run_dir), "providers": [p.name for p in providers], "use_mock": use_mock},
+        data={
+            "run_dir": str(run_dir),
+            "providers": [p.name for p in providers],
+            "founders": [p.name for p in roles.founders],
+            "advisors": [p.name for p in roles.advisors],
+            "investors": [p.name for p in roles.investors],
+            "use_mock": use_mock,
+            "deliberation": effective_deliberation,
+        },
     ))
-
     try:
         # Stage 1: Ideate and Select
         if checkpoint and checkpoint.get("stage1_complete"):
@@ -686,7 +820,7 @@ def run_pipeline(
         else:
             selections = run_stage1(
                 providers, ideas_per_provider, retry_max, concurrency, run_dir,
-                sector_focus=sector_focus, emit=emit,
+                sector_focus=sector_focus, emit=emit, roles=roles,
             )
             _save_checkpoint(run_dir, {"stage1_complete": True})
 
@@ -697,13 +831,14 @@ def run_pipeline(
             final_plans = {p["founder_provider"]: p for p in plans_list}
         else:
             final_plans = run_stage2(
-                providers, selections, retry_max, concurrency, max_iterations, run_dir, emit=emit,
+                providers, selections, retry_max, concurrency, max_iterations, run_dir,
+                emit=emit, roles=roles, deliberation_enabled=effective_deliberation,
             )
             _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True})
 
         # Stage 3: Seed Pitch
         report = run_stage3(
-            providers, final_plans, retry_max, concurrency, run_dir, emit=emit,
+            providers, final_plans, retry_max, concurrency, run_dir, emit=emit, roles=roles,
         )
         _save_checkpoint(run_dir, {"stage1_complete": True, "stage2_complete": True, "stage3_complete": True})
 
@@ -792,6 +927,21 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--resume", type=str, default=None,
         help="Resume a previous run from the given run directory (e.g. out/run_1234567890)",
     )
+    parser.add_argument(
+        "--roles", nargs="*", default=None,
+        help=(
+            "Role assignments: founders=name1,name2 advisors=name3,name4 investors=name5,name6. "
+            "Overrides the roles: section in pipeline.yaml."
+        ),
+    )
+    parser.add_argument(
+        "--deliberation", action="store_true",
+        help="Enable advisor deliberation mode (lead advisor synthesizes reviews before founder iterates)",
+    )
+    parser.add_argument(
+        "--estimate-cost", action="store_true",
+        help="Print estimated pipeline cost for the configured models and exit (no API calls made)",
+    )
     return parser.parse_args(argv)
 
 
@@ -802,6 +952,26 @@ def main(argv: list[str] | None = None) -> int:
 
     use_mock = args.use_mock or os.getenv("USE_MOCK", "0") == "1"
 
+    # --estimate-cost: print cost estimate and exit
+    if args.estimate_cost:
+        from vc_agents.pipeline.cost_estimator import estimate_cost  # noqa: PLC0415
+        yaml_config = _load_config()
+        model_ids = [entry.get("model", "") for entry in yaml_config.get("providers", [])]
+        model_ids = [m for m in model_ids if m]
+        if not model_ids:
+            model_ids = ["gpt-5.2", "claude-opus-4-5", "deepseek-reasoner", "gemini-3-pro-preview"]
+        estimate = estimate_cost(model_ids)
+        print(json.dumps(estimate, indent=2))
+        return 0
+
+    # Parse --roles flag into a dict
+    roles_override: dict[str, Any] | None = None
+    if args.roles:
+        roles_override = {}
+        for item in args.roles:
+            role, names = item.split("=", 1)
+            roles_override[role.strip()] = [n.strip() for n in names.split(",")]
+
     resume_dir = Path(args.resume) if args.resume else None
     run_dir = run_pipeline(
         use_mock=use_mock,
@@ -811,6 +981,8 @@ def main(argv: list[str] | None = None) -> int:
         ideas_per_provider=args.ideas_per_provider,
         sector_focus=args.sector_focus,
         resume_dir=resume_dir,
+        roles_config=roles_override,
+        deliberation_enabled=args.deliberation,
     )
     logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0

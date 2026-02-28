@@ -1,0 +1,285 @@
+# VC AI Incubator — Model Catalog
+# Last updated: 2026-02-28
+#
+# Use this to choose models for your pipeline.yaml configuration.
+# Pricing is per 1M tokens (input/output) at standard tier, USD.
+# "Effective cost" estimates a typical pipeline run cost for that model
+# based on ~25 calls averaging 2K input + 1.5K output tokens per call.
+
+catalog:
+
+  # =====================================================================
+  # TIER 1: FRONTIER — Best reasoning, highest cost
+  # Use for: Lead founder, primary advisor, investor with highest stakes
+  # =====================================================================
+
+  - id: claude-opus-4-6
+    provider: anthropic
+    type: anthropic_messages
+    api_key_env: ANTHROPIC_API_KEY
+    pricing: { input: 5.00, output: 25.00 }  # was $15/$75 at Opus 4.1
+    context_window: 200K  # 1M in beta for tier 4 orgs
+    strengths:
+      - Strongest instruction-following and structured output compliance
+      - Deep qualitative reasoning and nuanced analysis
+      - Excellent at playing advisory/reviewer roles with calibrated scoring
+      - Best at maintaining persona consistency across long conversations
+    weaknesses:
+      - Slower than competitors at similar tier
+      - Higher cost than GPT-5.2 for comparable quality
+    best_roles: [advisor, investor]
+    tier: frontier
+
+  - id: gpt-5.2
+    provider: openai
+    type: openai_responses
+    api_key_env: OPENAI_API_KEY
+    pricing: { input: 1.75, output: 14.00 }
+    context_window: 400K
+    strengths:
+      - Best price-to-performance ratio at frontier tier
+      - Strong agentic/tool-use and structured output
+      - Native JSON mode eliminates most parse failures
+      - 400K context handles massive plans without truncation
+    weaknesses:
+      - Can be verbose — generates more output tokens than needed
+      - Reasoning depth slightly below Opus on subjective evaluation tasks
+    best_roles: [founder, advisor]
+    tier: frontier
+
+  - id: gemini-3.1-pro-preview
+    provider: google
+    type: openai_compatible_chat
+    api_key_env: GEMINI_API_KEY
+    base_url_env: GEMINI_BASE_URL
+    pricing: { input: 2.00, output: 12.00 }  # doubles above 200K context
+    context_window: 1M
+    strengths:
+      - Largest context window — can hold entire pipeline history
+      - Strong scientific/technical reasoning (94.3% GPQA Diamond)
+      - Competitive coding benchmarks (80.6% SWE-Bench)
+      - Best value frontier model on output pricing
+    weaknesses:
+      - Preview model — may change behavior between versions
+      - Thinking tokens billed as output, can inflate costs unpredictably
+      - JSON compliance slightly below OpenAI with json_object mode
+    best_roles: [founder, advisor]
+    tier: frontier
+
+  # =====================================================================
+  # TIER 2: STRONG — Near-frontier quality, significantly cheaper
+  # Use for: Founders who need good output, secondary advisors
+  # =====================================================================
+
+  - id: claude-sonnet-4-5
+    provider: anthropic
+    type: anthropic_messages
+    api_key_env: ANTHROPIC_API_KEY
+    pricing: { input: 3.00, output: 15.00 }
+    context_window: 200K  # 1M in beta
+    strengths:
+      - Best coding model in the Claude family (optimized for agentic work)
+      - Strong at iterative refinement — good founder model
+      - Reliable structured output and instruction following
+      - Extended thinking available for complex tasks
+    weaknesses:
+      - Output pricing same as frontier Opus 4.6 despite lower capability
+    best_roles: [founder, advisor]
+    tier: strong
+
+  - id: claude-opus-4-5
+    provider: anthropic
+    type: anthropic_messages
+    api_key_env: ANTHROPIC_API_KEY
+    pricing: { input: 5.00, output: 25.00 }
+    context_window: 200K
+    strengths:
+      - Previous flagship, still excellent for complex reasoning
+      - 80.9% SWE-bench Verified (strong technical evaluation)
+      - Particularly good at nuanced feedback and scoring
+    weaknesses:
+      - Same price as Opus 4.6 — generally prefer the newer model
+    best_roles: [advisor, investor]
+    tier: strong
+
+  - id: deepseek-v3.2-exp
+    provider: deepseek
+    type: openai_compatible_chat
+    api_key_env: DEEPSEEK_API_KEY
+    base_url_env: DEEPSEEK_BASE_URL
+    pricing: { input: 0.28, output: 0.42 }  # cache hit: $0.028 input
+    context_window: 128K
+    strengths:
+      - 50-100x cheaper than frontier models for comparable reasoning
+      - Strong technical/analytical reasoning
+      - Massive cost advantage enables many more iteration rounds
+      - Cache hit pricing ($0.028/M input) is essentially free for repeated prompts
+    weaknesses:
+      - Occasional JSON compliance issues (benefits most from json_object mode)
+      - China-based API — latency may be higher from EU/US
+      - Thinking tokens in reasoner mode can be verbose
+    best_roles: [founder, challenger]
+    tier: strong
+
+  - id: gpt-5
+    provider: openai
+    type: openai_responses
+    api_key_env: OPENAI_API_KEY
+    pricing: { input: 1.25, output: 10.00 }
+    context_window: 128K
+    strengths:
+      - Cheapest OpenAI frontier-class model
+      - Native JSON mode support
+      - Good general-purpose reasoning
+    weaknesses:
+      - Smaller context than GPT-5.2
+      - Slightly lower benchmark scores
+    best_roles: [founder, advisor]
+    tier: strong
+
+  # =====================================================================
+  # TIER 3: EFFICIENT — Good enough for many roles, very cheap
+  # Use for: High-volume feedback rounds, cost-constrained runs
+  # =====================================================================
+
+  - id: claude-haiku-4-5
+    provider: anthropic
+    type: anthropic_messages
+    api_key_env: ANTHROPIC_API_KEY
+    pricing: { input: 1.00, output: 5.00 }
+    context_window: 200K
+    strengths:
+      - Near-frontier quality at 5x lower cost than Sonnet
+      - Fastest Claude model — good for concurrent feedback rounds
+      - Strong instruction following inherited from Claude 4.5 family
+    weaknesses:
+      - Less nuanced than Sonnet/Opus on subjective evaluation
+      - May score too generously as an advisor (less calibrated)
+    best_roles: [advisor, challenger]
+    tier: efficient
+
+  - id: gpt-5-mini
+    provider: openai
+    type: openai_responses
+    api_key_env: OPENAI_API_KEY
+    pricing: { input: 0.25, output: 2.00 }
+    context_window: 128K
+    strengths:
+      - Very cheap with native JSON mode
+      - Good for structured extraction and feedback generation
+      - 128K context is generous for the price
+    weaknesses:
+      - Noticeably lower reasoning depth than full GPT-5
+      - May produce shallow advisor feedback
+    best_roles: [challenger, feedback]
+    tier: efficient
+
+  - id: gemini-3-flash
+    provider: google
+    type: openai_compatible_chat
+    api_key_env: GEMINI_API_KEY
+    base_url_env: GEMINI_BASE_URL
+    pricing: { input: 0.50, output: 3.00 }
+    context_window: 1M
+    strengths:
+      - 1M context at flash-tier pricing
+      - Good for bulk feedback and review tasks
+      - Free tier available for prototyping (15 RPM)
+    weaknesses:
+      - Lower reasoning quality than Pro
+      - May need more retries for JSON compliance
+    best_roles: [challenger, feedback]
+    tier: efficient
+
+  - id: gpt-5-nano
+    provider: openai
+    type: openai_responses
+    api_key_env: OPENAI_API_KEY
+    pricing: { input: 0.05, output: 0.40 }
+    context_window: 32K
+    strengths:
+      - Cheapest viable model for structured output
+      - Good for simple classification and scoring tasks
+    weaknesses:
+      - 32K context is tight for later pipeline stages
+      - Reasoning too shallow for founder or primary advisor roles
+    best_roles: [challenger]
+    tier: budget
+
+  # =====================================================================
+  # TIER 4: OPEN-SOURCE VIA API — Budget option, variable quality
+  # Use for: Experiments, cost studies, additional challenger voices
+  # =====================================================================
+
+  - id: llama-4-maverick
+    provider: together  # or groq, fireworks
+    type: openai_compatible_chat
+    api_key_env: TOGETHER_API_KEY
+    base_url_env: TOGETHER_BASE_URL
+    pricing: { input: 0.20, output: 0.60 }  # varies by provider
+    context_window: 128K
+    strengths:
+      - Open-source — can self-host for zero marginal cost
+      - Competitive with mid-tier closed models
+      - Multiple hosting providers for redundancy
+    weaknesses:
+      - JSON compliance varies by hosting provider
+      - May need more retries than closed-source models
+    best_roles: [founder, challenger]
+    tier: open-source
+
+  - id: mistral-large
+    provider: mistral
+    type: openai_compatible_chat
+    api_key_env: MISTRAL_API_KEY
+    base_url_env: MISTRAL_BASE_URL
+    pricing: { input: 2.00, output: 6.00 }
+    context_window: 128K
+    strengths:
+      - Strong European-perspective reasoning
+      - Good structured output compliance
+      - Competitive pricing for the quality tier
+    weaknesses:
+      - Smaller ecosystem than OpenAI/Anthropic
+      - Less tested in multi-agent simulation scenarios
+    best_roles: [founder, advisor]
+    tier: strong
+
+  - id: qwen3-235b
+    provider: qwen
+    type: openai_compatible_chat
+    api_key_env: QWEN_API_KEY
+    base_url_env: QWEN_BASE_URL
+    pricing: { input: 0.00, output: 0.00 }  # free during preview
+    context_window: 131K
+    strengths:
+      - Free during preview period
+      - 235B parameters, competitive reasoning
+    weaknesses:
+      - Free tier may have rate limits or change without notice
+      - Less proven in structured output tasks
+    best_roles: [challenger]
+    tier: open-source
+
+# Preset configurations for common scenarios
+presets:
+
+  default:
+    description: "The original 4-model config. Balanced cost and quality."
+    providers: [gpt-5.2, claude-opus-4-5, deepseek-v3.2-exp, gemini-3.1-pro-preview]
+    estimated_cost_per_run: "$8-14"
+
+  budget:
+    description: "Minimize cost. Good for rapid iteration and testing."
+    providers: [gpt-5-mini, claude-haiku-4-5, deepseek-v3.2-exp, gemini-3-flash]
+    estimated_cost_per_run: "$1-3"
+
+  premium:
+    description: "Maximum quality. Use frontier models for all roles."
+    providers: [gpt-5.2, claude-opus-4-6, gemini-3.1-pro-preview, mistral-large]
+    estimated_cost_per_run: "$15-25"
+
+  deepseek_heavy:
+    description: "Use DeepSeek for most roles, save money for more iterations."
+    providers: [deepseek-v3.2-exp, claude-sonnet-4-5, gpt-5-mini, gemini-3-flash]
+    estimated_cost_per_run: "$2-5"

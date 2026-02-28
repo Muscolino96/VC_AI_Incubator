@@ -31,6 +31,19 @@ pipeline:
   max_iterations: 3        # Stage 2 feedback rounds
   retry_max: 3             # JSON parse/schema retries
   concurrency: 1           # parallel API calls (increase with caution)
+  deliberation: false      # Set to true to enable advisor deliberation mode
+
+# Optional role assignment.
+# If omitted, all providers do all roles (default behavior).
+# If present, only the listed providers participate in each role.
+# A provider can appear in multiple roles.
+#
+# Example (uncomment and edit to use):
+#
+# roles:
+#   founders: [anthropic]                         # Only Claude proposes ideas and builds plans
+#   advisors: [openai, deepseek, gemini]           # These 3 challenge and advise
+#   investors: [openai, deepseek, gemini]          # These 3 evaluate pitches
 
 # Advisor roles rotate through Stage 2 iterations.
 # Each of the 3 non-founder models gets one of these roles.

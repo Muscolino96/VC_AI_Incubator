@@ -50,10 +50,17 @@ class MockProvider(BaseProvider):
             idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
             return json.dumps(self._mock_startup_plan(idea_id), indent=2)
 
-        # Stage 2: Iteration (check before advisor review since iteration prompt embeds reviews_json)
+        # Stage 2: Iteration (check before deliberation and advisor review because
+        # iteration prompt can embed advisor reviews or deliberation JSON in reviews_json)
         if "iterating on your startup plan" in lower or "iteration round" in lower:
             idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
             return json.dumps(self._mock_startup_plan(idea_id), indent=2)
+
+        # Stage 2: Deliberation synthesis (check before advisor review because
+        # the deliberation prompt embeds the raw reviews which contain advisor keywords)
+        if "consensus_issues" in lower or "lead_advisor" in lower or "synthesizing feedback" in lower:
+            idea_id = _find_json_field(prompt, "idea_id", f"{self.name}-idea-1")
+            return json.dumps(self._mock_deliberation(idea_id), indent=2)
 
         # Stage 2: Advisor review
         if "advisor_role" in lower or "readiness_score" in lower or "ready_for_pitch" in lower:
@@ -282,6 +289,32 @@ class MockProvider(BaseProvider):
                 "hospital departments and multi-site health systems. $100M ARR by year 5 serving "
                 "5,000+ facilities with an ecosystem of workflow automation modules."
             ),
+        }
+
+    def _mock_deliberation(self, idea_id: str) -> dict[str, Any]:
+        return {
+            "idea_id": idea_id,
+            "lead_advisor": self.name,
+            "consensus_issues": [
+                "Market sizing assumptions need grounding in real data",
+                "Unit economics are directionally sound but missing customer acquisition cost",
+            ],
+            "disagreements": [
+                {
+                    "topic": "Go-to-market approach",
+                    "positions": (
+                        "Market Strategist favors enterprise sales; "
+                        "Technical Advisor prefers product-led growth"
+                    ),
+                }
+            ],
+            "priority_actions": [
+                "Ground TAM/SAM in real market data with sources",
+                "Add customer acquisition cost to unit economics",
+                "Resolve GTM strategy — pick one and commit",
+            ],
+            "overall_readiness": True,
+            "avg_score": 8,
         }
 
     def _mock_investor_decision(self, idea_id: str) -> dict[str, Any]:

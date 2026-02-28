@@ -134,3 +134,138 @@ def _read_jsonl(path: Path) -> list[dict]:
             if line:
                 records.append(json.loads(line))
     return records
+
+
+# ---------------------------------------------------------------------------
+# Role Assignment Tests
+# ---------------------------------------------------------------------------
+
+
+class TestRoleAssignment:
+    """Tests for the RoleAssignment dataclass and from_config factory."""
+
+    def _make_providers(self) -> list:
+        from vc_agents.providers.mock import MockProvider
+        return [MockProvider("openai"), MockProvider("anthropic"), MockProvider("deepseek"), MockProvider("gemini")]
+
+    def test_default_all_providers_all_roles(self):
+        """Without roles config, every provider does every role."""
+        from vc_agents.pipeline.run import RoleAssignment
+        providers = self._make_providers()
+        roles = RoleAssignment.from_config(providers, None)
+        assert [p.name for p in roles.founders] == [p.name for p in providers]
+        assert [p.name for p in roles.advisors] == [p.name for p in providers]
+        assert [p.name for p in roles.investors] == [p.name for p in providers]
+
+    def test_custom_roles_from_config(self):
+        """Roles config assigns specific providers to roles."""
+        from vc_agents.pipeline.run import RoleAssignment
+        providers = self._make_providers()
+        roles_config = {
+            "founders": ["anthropic"],
+            "advisors": ["openai", "deepseek", "gemini"],
+            "investors": ["openai", "deepseek", "gemini"],
+        }
+        roles = RoleAssignment.from_config(providers, roles_config)
+        assert [p.name for p in roles.founders] == ["anthropic"]
+        assert [p.name for p in roles.advisors] == ["openai", "deepseek", "gemini"]
+        assert [p.name for p in roles.investors] == ["openai", "deepseek", "gemini"]
+
+    def test_unknown_provider_in_role_raises(self):
+        """Referencing a provider not in the providers list raises ValueError."""
+        from vc_agents.pipeline.run import RoleAssignment
+        providers = self._make_providers()
+        roles_config = {"founders": ["nonexistent"], "advisors": ["openai"], "investors": ["openai"]}
+        with pytest.raises(ValueError, match="unknown provider"):
+            RoleAssignment.from_config(providers, roles_config)
+
+    def test_empty_role_raises(self):
+        """A role with no providers raises ValueError."""
+        from vc_agents.pipeline.run import RoleAssignment
+        providers = self._make_providers()
+        roles_config = {"founders": [], "advisors": ["openai"], "investors": ["openai"]}
+        with pytest.raises(ValueError, match="no providers assigned"):
+            RoleAssignment.from_config(providers, roles_config)
+
+    def test_pipeline_with_single_founder(self, tmp_path, monkeypatch):
+        """Pipeline completes with 1 founder and 3 advisors/investors."""
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=2,
+            max_iterations=1,
+            ideas_per_provider=5,
+            roles_config={
+                "founders": ["anthropic"],
+                "advisors": ["openai", "deepseek", "gemini"],
+                "investors": ["openai", "deepseek", "gemini"],
+            },
+        )
+        assert run_dir.exists()
+        # Only 1 founder → 5 ideas, 3 reviewers each = 15 feedback items
+        ideas = _read_jsonl(run_dir / "stage1_ideas.jsonl")
+        assert len(ideas) == 5
+        feedback = _read_jsonl(run_dir / "stage1_feedback.jsonl")
+        assert len(feedback) == 15
+        # 1 selection, 1 pitch, 3 investor decisions
+        selections = _read_jsonl(run_dir / "stage1_selections.jsonl")
+        assert len(selections) == 1
+        decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
+        assert len(decisions) == 3
+
+
+# ---------------------------------------------------------------------------
+# Deliberation Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDeliberation:
+    """Tests for the advisor deliberation feature."""
+
+    def test_mock_deliberation_validates(self):
+        """Mock deliberation output validates against DELIBERATION_SCHEMA."""
+        from jsonschema import validate
+        from vc_agents.providers.mock import MockProvider
+        from vc_agents.schemas import DELIBERATION_SCHEMA
+
+        mock = MockProvider("test")
+        result = mock._mock_deliberation("test-idea-1")
+        validate(instance=result, schema=DELIBERATION_SCHEMA)
+
+    def test_pipeline_with_deliberation(self, tmp_path, monkeypatch):
+        """Pipeline completes with deliberation enabled."""
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=2,
+            max_iterations=2,
+            ideas_per_provider=5,
+            deliberation_enabled=True,
+        )
+        assert run_dir.exists()
+        assert (run_dir / "stage3_pitches.jsonl").exists()
+        assert (run_dir / "portfolio_report.csv").exists()
+
+    def test_deliberation_files_written(self, tmp_path, monkeypatch):
+        """Deliberation JSONL files are written per founder per round."""
+        monkeypatch.chdir(tmp_path)
+        run_dir = run_pipeline(
+            use_mock=True,
+            concurrency=1,
+            retry_max=2,
+            max_iterations=2,
+            ideas_per_provider=5,
+            deliberation_enabled=True,
+        )
+        deliberation_files = list(run_dir.glob("stage2_*_deliberation_round*.jsonl"))
+        # At least one deliberation file per founder (4 founders x at least 1 round = 4+)
+        assert len(deliberation_files) >= 4
+        # Each file must contain a valid deliberation record
+        from jsonschema import validate
+        from vc_agents.schemas import DELIBERATION_SCHEMA
+        for f in deliberation_files:
+            records = _read_jsonl(f)
+            assert len(records) == 1
+            validate(instance=records[0], schema=DELIBERATION_SCHEMA)

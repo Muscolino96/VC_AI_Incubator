@@ -242,6 +242,57 @@ PITCH_SCHEMA = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Stage 2: Deliberation (opt-in advisor consensus summary)
+# ---------------------------------------------------------------------------
+
+DELIBERATION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "idea_id",
+        "lead_advisor",
+        "consensus_issues",
+        "disagreements",
+        "priority_actions",
+        "overall_readiness",
+        "avg_score",
+    ],
+    "properties": {
+        "idea_id": {"type": "string"},
+        "lead_advisor": {"type": "string"},
+        "consensus_issues": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Issues flagged by 2+ advisors, in priority order",
+        },
+        "disagreements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["topic", "positions"],
+                "properties": {
+                    "topic": {"type": "string"},
+                    "positions": {"type": "string"},
+                },
+            },
+            "description": "Topics where advisors disagree and the founder should decide",
+        },
+        "priority_actions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Ordered list of what the founder should fix first",
+        },
+        "overall_readiness": {"type": "boolean"},
+        "avg_score": {"type": "number", "minimum": 1, "maximum": 10},
+    },
+}
+
 INVESTOR_DECISION_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
