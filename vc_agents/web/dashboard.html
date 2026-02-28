@@ -514,6 +514,30 @@ details[open] .plan-chevron { transform: rotate(90deg); background: var(--gold-d
 }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+/* ─────────────────────────── FEEDBACK ─────────────────────────── */
+.feedback-section { margin-top: 28px; }
+.feedback-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-top: 14px; }
+.feedback-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 15px; }
+.feedback-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.feedback-idea-id { font-family: var(--font-mono); font-size: 10px; color: var(--text-xs); }
+.feedback-score { font-family: var(--font-serif); font-size: 22px; }
+.feedback-reviewer { margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.feedback-summary { font-size: 12px; color: var(--text-dim); line-height: 1.55; margin-bottom: 8px; }
+.feedback-list { display: flex; flex-direction: column; gap: 4px; }
+.feedback-list-item { font-size: 11px; color: var(--text-dim); display: flex; gap: 6px; }
+.feedback-list-item::before { content: '·'; color: var(--gold); flex-shrink: 0; }
+.feedback-subsection-label { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text-xs); margin-bottom: 4px; }
+
+/* ─────────────────────────── TOKEN USAGE ─────────────────────────── */
+.token-section { margin-top: 28px; }
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+.token-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+.token-provider { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.token-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.token-label { font-size: 11px; color: var(--text-xs); }
+.token-val { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+.token-total { font-family: var(--font-mono); font-size: 13px; color: var(--text); font-weight: 500; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
 </style>
 </head>
 <body>
@@ -1181,9 +1205,11 @@ async function loadResults(runId) {
     if (!resp.ok) return;
     const r = await resp.json();
     renderIdeas(r.stage1_ideas || []);
-    renderPlans(r.stage2_final_plans || []);
+    renderPlans(r.stage2_final_plans || [], r);
     renderPitches(r.stage3_pitches || [], r.stage3_decisions || []);
     renderPortfolio(r.portfolio_report || []);
+    renderFeedback(r.stage1_feedback || []);
+    renderTokenUsage(r.token_usage || {});
     switchTab('portfolio');
   } catch(e) {}
 }
@@ -1212,7 +1238,7 @@ function renderIdeas(ideas) {
   el.innerHTML = html + '</div>';
 }
 
-function renderPlans(plans) {
+function renderPlans(plans, allResults) {
   const el = document.getElementById('plansContent');
   if (!plans.length) { el.innerHTML = emptyState('📐','No plans','Plans appear after Stage 2.'); return; }
   let html = '<div class="plan-accordion">';
@@ -1250,6 +1276,30 @@ function renderPlans(plans) {
         <div class="plan-sec full"><h4>12-Month Roadmap</h4><p>${esc(p.twelve_month_roadmap)}</p></div>
         <div class="plan-sec full"><h4>Funding Ask</h4><p><strong>${esc(p.funding_ask?.amount)}</strong> — ${esc(p.funding_ask?.proposed_valuation)}<br>${esc(p.funding_ask?.use_of_funds)}<br>Targets: ${esc(p.funding_ask?.target_metrics)}</p></div>
       </div>
+      ${(() => {
+        const founderName = (p.founder_provider || '').toLowerCase();
+        const deliberationKeys = allResults
+          ? Object.keys(allResults).filter(k => k.startsWith(`stage2_${founderName}_deliberation_round`))
+          : [];
+        if (!deliberationKeys.length) return '';
+        return `<div class="plan-body" style="border-top:1px solid var(--border);padding-top:16px">
+          <div class="plan-sec full">
+            <h4>Deliberation Rounds</h4>
+            ${deliberationKeys.sort().map(key => {
+              const rounds = allResults[key] || [];
+              return rounds.map(d => `
+                <div style="background:var(--ink-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-xs)">${esc(key.replace('stage2_','').replace(/_/g,' '))}</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:${d.overall_readiness ? 'var(--green)' : 'var(--yellow)'}">${d.avg_score ? d.avg_score.toFixed(1) + '/10' : ''} ${d.overall_readiness ? '✓ ready' : '— iterating'}</span>
+                  </div>
+                  ${(d.consensus_issues || []).length ? `<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-xs);margin-bottom:4px">Consensus issues</div>${(d.consensus_issues||[]).map(i => `<div style="font-size:11px;color:var(--text-dim);margin-bottom:2px">· ${esc(i)}</div>`).join('')}` : ''}
+                  ${(d.priority_actions || []).length ? `<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-xs);margin-top:6px;margin-bottom:4px">Priority actions</div>${(d.priority_actions||[]).map(a => `<div style="font-size:11px;color:var(--text-dim);margin-bottom:2px">· ${esc(a)}</div>`).join('')}` : ''}
+                </div>`).join('');
+            }).join('')}
+          </div>
+        </div>`;
+      })()}
     </details>`;
   }
   el.innerHTML = html + '</div>';
@@ -1348,6 +1398,75 @@ function emptyState(icon, title, desc) {
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ══════════════════ RENDER FEEDBACK ══════════════════ */
+function renderFeedback(feedback) {
+  const el = document.getElementById('ideasContent');
+  if (!feedback || !feedback.length) return; // ideas already rendered; feedback is additive
+  // Group feedback by idea_id
+  const byIdea = {};
+  for (const fb of feedback) {
+    const key = fb.idea_id || 'unknown';
+    if (!byIdea[key]) byIdea[key] = [];
+    byIdea[key].push(fb);
+  }
+  // Append feedback section after existing idea grid
+  const div = document.createElement('div');
+  div.className = 'feedback-section';
+  let html = '<div class="section-label" style="margin-bottom:14px">Stage 1 Reviewer Feedback</div><div class="feedback-grid">';
+  for (const [ideaId, reviews] of Object.entries(byIdea)) {
+    const avgScore = reviews.length
+      ? (reviews.reduce((s, r) => s + (r.score || 0), 0) / reviews.length).toFixed(1)
+      : '—';
+    const scoreColor = parseFloat(avgScore) >= 7 ? 'var(--green)' : parseFloat(avgScore) >= 5 ? 'var(--yellow)' : 'var(--red)';
+    for (const fb of reviews) {
+      const prov = (fb.reviewer_provider || '').toLowerCase();
+      const strengths = (fb.strengths || []).slice(0, 2).map(s => `<div class="feedback-list-item">${esc(s)}</div>`).join('');
+      const weaknesses = (fb.weaknesses || []).slice(0, 2).map(w => `<div class="feedback-list-item">${esc(w)}</div>`).join('');
+      html += `<div class="feedback-card">
+        <div class="feedback-header">
+          <div>
+            <div class="feedback-idea-id">${esc(ideaId)}</div>
+            <div class="feedback-reviewer"><span class="provider-badge ${prov}">${esc(fb.reviewer_provider)}</span></div>
+          </div>
+          <div class="feedback-score" style="color:${scoreColor}">${fb.score ?? '—'}/10</div>
+        </div>
+        <div class="feedback-summary">${esc(fb.summary)}</div>
+        ${strengths ? `<div class="feedback-subsection-label">Strengths</div><div class="feedback-list">${strengths}</div>` : ''}
+        ${weaknesses ? `<div class="feedback-subsection-label" style="margin-top:6px">Weaknesses</div><div class="feedback-list">${weaknesses}</div>` : ''}
+      </div>`;
+    }
+  }
+  html += '</div>';
+  div.innerHTML = html;
+  el.appendChild(div);
+}
+
+/* ══════════════════ RENDER TOKEN USAGE ══════════════════ */
+function renderTokenUsage(usage) {
+  if (!usage || !Object.keys(usage).length) return;
+  // Append token usage section after portfolio content
+  const portfolioEl = document.getElementById('portfolioContent');
+  if (!portfolioEl) return;
+  const div = document.createElement('div');
+  div.className = 'token-section';
+  let html = '<div class="section-label" style="margin-bottom:14px">Token Usage</div><div class="token-grid">';
+  for (const [prov, data] of Object.entries(usage)) {
+    const input = (data.input_tokens || 0).toLocaleString();
+    const output = (data.output_tokens || 0).toLocaleString();
+    const total = ((data.input_tokens || 0) + (data.output_tokens || 0)).toLocaleString();
+    const provClass = prov.toLowerCase();
+    html += `<div class="token-card">
+      <div class="token-provider" style="color:var(--c-${provClass}, var(--text-dim))">${esc(prov)}</div>
+      <div class="token-row"><span class="token-label">Input</span><span class="token-val">${input}</span></div>
+      <div class="token-row"><span class="token-label">Output</span><span class="token-val">${output}</span></div>
+      <div class="token-total">${total} total</div>
+    </div>`;
+  }
+  html += '</div>';
+  div.innerHTML = html;
+  portfolioEl.appendChild(div);
 }
 
 /* ══════════════════ INIT ══════════════════ */
