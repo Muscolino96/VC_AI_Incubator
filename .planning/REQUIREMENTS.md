@@ -7,8 +7,8 @@
 
 ### Backend Bug Fixes
 
-- [ ] **BUG-01**: `_load_jsonl` is importable in `server.py` so checkpoint resume via direct HTTP call does not raise NameError
-- [ ] **BUG-02**: `final_plans` checkpoint dict is keyed by `idea_id`; Stage 3 iteration looks up by `idea_id`; no KeyError possible regardless of founder name vs provider name mismatch
+- [x] **BUG-01**: `_load_jsonl` is importable in `server.py` so checkpoint resume via direct HTTP call does not raise NameError
+- [x] **BUG-02**: `final_plans` checkpoint dict is keyed by `idea_id`; Stage 3 iteration looks up by `idea_id`; no KeyError possible regardless of founder name vs provider name mismatch
 - [ ] **BUG-03**: `POST /api/runs` body is parsed via a Pydantic `RunConfig` model (not bare `dict`); endpoint validates input and appears correctly in `/docs`
 - [ ] **BUG-04**: `run_pipeline()` accepts `slot3_base_url` and `slot4_base_url` parameters; `server.py` reads `config.base_urls` and forwards them; `AsyncOpenAI` clients for Slots 3 & 4 use the dashboard-supplied base URL, not hardcoded env vars
 
@@ -50,8 +50,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 | Pending |
-| BUG-02 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
+| BUG-02 | Phase 1 | Complete |
 | BUG-03 | Phase 1 | Pending |
 | BUG-04 | Phase 1 | Pending |
 | UI-01 | Phase 2 | Pending |

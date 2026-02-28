@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Fix _load_jsonl import (BUG-01) and rekey checkpoint dicts by idea_id (BUG-02)
+- [x] 01-01-PLAN.md — Fix _load_jsonl import (BUG-01) and rekey checkpoint dicts by idea_id (BUG-02)
 - [ ] 01-02-PLAN.md — Add RunConfig Pydantic model (BUG-03) and wire slot base URLs through server + pipeline (BUG-04)
 
 ### Phase 2: Dashboard Overhaul
@@ -51,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Backend Fixes | 0/2 | Not started | - |
+| 1. Backend Fixes | 1/2 | In progress | - |
 | 2. Dashboard Overhaul | 0/TBD | Not started | - |
