@@ -1,14 +1,14 @@
-# Roadmap: VC AI Incubator Overhaul
+# Roadmap: VC AI Incubator
 
 ## Overview
 
-Nine targeted improvements to the existing pipeline: parallelization makes it fast, pre-flight validation makes it safe to start, resume fix makes it resilient to crashes, flexible idea count extends configurability, a new dashboard brings the UX up to spec, dynamic provider count removes the hard-coded 4-provider assumption, rich real-time UX surfaces live progress, native JSON mode reduces retry overhead, and live cost tracking gives the operator budget control.
+**v1.0 (Phases 1-9) — Complete.** Nine targeted overhaul improvements shipped: parallelization, pre-flight validation, per-founder Stage 2 resume, flexible idea count, new dashboard, dynamic provider count, rich real-time UX, native JSON mode, and live cost tracking. All 9 phases complete, 93/93 tests passing.
 
-## Phases
+**v1.1 (Phases 10-13) — Pipeline Resilience.** Live run analysis identified four structural weaknesses causing crashes: schema rigidity, checkpoint inconsistency, no fault isolation, and false test confidence from an always-perfect mock. These four phases fix them systematically.
 
-**Phase Numbering:**
-- Integer phases (1-9): Planned overhaul work in dependency order
-- Decimal phases: Urgent insertions only (none planned)
+---
+
+## v1.0 Phases (Complete)
 
 - [x] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time (2026-02-28)
 - [x] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins (2026-02-28)
@@ -19,6 +19,17 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators (2026-02-28)
 - [x] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers (2026-02-28)
 - [x] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json` (2026-02-28)
+
+---
+
+## v1.1 Phases (Pipeline Resilience)
+
+- [ ] **Phase 10: Schema Normalization** - Normalize common model output variations before validation so format differences stop crashing the pipeline
+- [ ] **Phase 11: Checkpoint Integrity** - Atomic checkpoint writes and resume verification so crashes during a write never produce inconsistent state
+- [ ] **Phase 12: Per-Founder Fault Isolation** - One founder or investor failing no longer aborts the entire pipeline; partial results documented in the report
+- [ ] **Phase 13: Adversarial Test Suite** - FlawedMockProvider + normalization tests + fault injection + resume integrity tests replace false confidence from the always-valid mock
+
+---
 
 ## Phase Details
 
@@ -161,9 +172,56 @@ Plans:
 - [x] 09-01-PLAN.md — Create CostTracker module, integrate into run_pipeline (running total + budget enforcement + cost_report.json + CLI flag + server.py wiring) (COST-01, COST-02, COST-04, COST-05)
 - [x] 09-02-PLAN.md — Add live cost counter to dashboard, write TestCostTracker test suite (COST-03, COST-01, COST-02, COST-04, COST-05)
 
+---
+
+### Phase 10: Schema Normalization
+**Goal**: Common model output format variations are silently corrected before schema validation, so format mismatches no longer cause hard crashes after 3 retries
+**Depends on**: Phase 9 (v1.0 complete)
+**Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04
+**Success Criteria** (what must be TRUE):
+  1. A model response that returns a prose field (e.g. `key_conditions`) as an array of strings is accepted and converted to a single string before reaching `validate_schema`
+  2. A model response that returns `conviction_score: 5.0` (float) passes validation and the stored value is the integer `5`
+  3. A model response that omits `funding_ask` entirely is accepted; the field is present in the validated output with a sensible default value
+  4. Every prose string field across all schemas in `schemas.py` accepts both `string` and `array` types — a systematic audit confirms no string-only prose field remains
+**Plans**: TBD
+
+### Phase 11: Checkpoint Integrity
+**Goal**: A pipeline crash at any point during a write leaves the run directory in a state that the next resume can detect and recover from, never in a silently corrupt state
+**Depends on**: Phase 10
+**Requirements**: CKPT-01, CKPT-02, CKPT-03
+**Success Criteria** (what must be TRUE):
+  1. `checkpoint.json` is never written before its backing JSONL files are fully written and fsync'd — the write order is enforced in all code paths in `run.py`
+  2. On `--resume`, the pipeline verifies that each stage marked complete in `checkpoint.json` has its expected backing JSONL file present with the correct record count; a mismatch causes the affected stage to rerun rather than crash
+  3. After a partial Stage 2 resume completes (some founders were in `stage2_founders_done`, new founders just finished), `stage2_final_plans.jsonl` contains plans for all founders — both previously done and newly completed — before `stage2_complete: True` is written
+**Plans**: TBD
+
+### Phase 12: Per-Founder Fault Isolation
+**Goal**: A single provider being flaky or down produces a partial but usable portfolio report instead of aborting the entire pipeline with a crash
+**Depends on**: Phase 11
+**Requirements**: FAULT-01, FAULT-02, FAULT-03, FAULT-04
+**Success Criteria** (what must be TRUE):
+  1. When one founder's Stage 2 task raises an exception after all retries, the other founders' Stage 2 tasks complete normally and their plans appear in `stage2_final_plans.jsonl`
+  2. When one investor's Stage 3 evaluation raises an exception, the other investors' decisions are preserved and the startup receives a verdict based on the available decisions
+  3. The portfolio report and CSV explicitly list which founders and investors were excluded due to failures, with a reason; no failed participant is silently dropped
+  4. A failed founder's exception causes a `FOUNDER_ERROR` event to be emitted with the founder name and error message, visible in the dashboard event stream
+**Plans**: TBD
+
+### Phase 13: Adversarial Test Suite
+**Goal**: The test suite exercises realistic imperfect model behavior so bugs that only appear with real models are caught in CI before live runs
+**Depends on**: Phase 10, Phase 11, Phase 12
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
+**Success Criteria** (what must be TRUE):
+  1. `FlawedMockProvider` exists in the test suite and can be configured to return arrays for prose fields, omit optional fields, return floats for int fields, and return enum values in wrong case — each flaw independently toggleable by probability
+  2. `tests/test_schemas.py` contains at least one test per known bad-output pattern (array prose field, float score, missing `funding_ask`, wrong-case enum) that feeds the normalizer a bad input and asserts the clean output
+  3. A fault injection test runs a 2-founder pipeline where one founder always raises in Stage 2, then asserts: the other founder's plan is in the output, the checkpoint reflects only the successful founder, and the portfolio report names the failed founder as excluded
+  4. A resume integrity test simulates a Stage 3 crash after a partial Stage 2 resume, then resumes and verifies that `stage2_final_plans.jsonl` contains all founders' plans and the final output is correct
+**Plans**: TBD
+
+---
+
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+**v1.0 Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -176,3 +234,12 @@ Plans:
 | 7. Rich Real-time UX | 3/3 | Complete | 2026-02-28 |
 | 8. Native JSON Mode | 1/1 | Complete | 2026-02-28 |
 | 9. Live Cost Tracking | 2/2 | Complete | 2026-02-28 |
+
+**v1.1 Execution Order:** 10 → 11 → 12 → 13
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 10. Schema Normalization | 0/? | Not started | - |
+| 11. Checkpoint Integrity | 0/? | Not started | - |
+| 12. Per-Founder Fault Isolation | 0/? | Not started | - |
+| 13. Adversarial Test Suite | 0/? | Not started | - |
