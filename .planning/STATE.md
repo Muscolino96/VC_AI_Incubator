@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-02-28T23:30:00.000Z"
+status: complete
+last_updated: "2026-02-28T23:59:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 8
-  total_plans: 14
-  completed_plans: 14
+  completed_phases: 9
+  total_plans: 16
+  completed_plans: 16
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** The pipeline must complete a full run reliably and produce a ranked portfolio report that reflects genuine multi-model deliberation.
-**Current focus:** Phase 9 — Live Cost Tracking
+**Current focus:** MILESTONE COMPLETE — all 9 phases executed, 93/93 tests pass
 
 ## Current Position
 
-Phase: 9 of 9 (Live Cost Tracking)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-28 — Phase 8 Native JSON Mode complete (1/1 plans, 80/80 tests)
+Phase: 9 of 9 (Live Cost Tracking) — COMPLETE
+Plan: 2 of 2 in Phase 9
+Status: All phases complete
+Last activity: 2026-02-28 — Phase 9 Live Cost Tracking complete (2/2 plans, 93/93 tests)
 
-Progress: [████████░░] 89%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -73,6 +73,10 @@ Recent decisions affecting current work:
 - Phase 3: Checkpoint merge strategy — always spread existing checkpoint into new save to preserve stage2_founders_done
 - Phase 3: founders_override param on run_stage2 to pass a subset without losing full roles.advisors pool
 - Phase 9: models_catalog.yaml is the pricing source for cost tracking (single source of truth)
+- Phase 9: CostTracker snapshots initial usage at construction; record_step() computes deltas — avoids double-counting tokens from before pipeline stages
+- Phase 9: Budget check happens at stage boundaries (after each stage call), not inside stage functions — simplest correct approach for this pipeline
+- Phase 9: cost_update step_complete events emitted after each stage; dashboard handles `step === 'cost_update'` to update live counter
+- Phase 9: BudgetExceeded caught before broad RuntimeError handler; checkpoint saved, cost_report.json written, then re-raised
 - Phase 5: Dashboard base_urls override takes precedence over env var and pipeline.yaml
 - Phase 4: ideas_per_provider==1 bypass in run_stage1() auto-selects my_ideas[0], skips LLM call
 - Phase 4: MockProvider always returns 5 ideas regardless of ideas_count; test assertions adjusted accordingly
@@ -98,5 +102,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 8 complete — 1/1 plans executed, 80/80 tests pass, ROADMAP updated
+Stopped at: Phase 9 complete — 2/2 plans executed, 93/93 tests pass, all 9 phases done
 Resume file: None

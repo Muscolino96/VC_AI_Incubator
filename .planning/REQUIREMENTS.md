@@ -73,11 +73,11 @@ Requirements for the overhaul milestone. Each maps to exactly one phase. Source:
 
 ### Cost
 
-- [ ] **COST-01**: After each API call, cost is calculated from token counts × model pricing from models_catalog.yaml
-- [ ] **COST-02**: Running cost total is maintained in `run_pipeline` and emitted as part of step events
-- [ ] **COST-03**: Dashboard shows a live cost counter during pipeline execution
-- [ ] **COST-04**: `--budget N` CLI flag stops the pipeline gracefully when running total exceeds N dollars, after the current step, saving a checkpoint
-- [ ] **COST-05**: Final cost breakdown written to `cost_report.json` alongside `token_usage.json`
+- [x] **COST-01**: After each API call, cost is calculated from token counts × model pricing from models_catalog.yaml
+- [x] **COST-02**: Running cost total is maintained in `run_pipeline` and emitted as part of step events
+- [x] **COST-03**: Dashboard shows a live cost counter during pipeline execution
+- [x] **COST-04**: `--budget N` CLI flag stops the pipeline gracefully when running total exceeds N dollars, after the current step, saving a checkpoint
+- [x] **COST-05**: Final cost breakdown written to `cost_report.json` alongside `token_usage.json`
 
 ## v2 Requirements
 
@@ -146,11 +146,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSON-02 | Phase 8 | Pending |
 | JSON-03 | Phase 8 | Pending |
 | JSON-04 | Phase 8 | Pending |
-| COST-01 | Phase 9 | Pending |
-| COST-02 | Phase 9 | Pending |
-| COST-03 | Phase 9 | Pending |
-| COST-04 | Phase 9 | Pending |
-| COST-05 | Phase 9 | Pending |
+| COST-01 | Phase 9 | Complete |
+| COST-02 | Phase 9 | Complete |
+| COST-03 | Phase 9 | Complete |
+| COST-04 | Phase 9 | Complete |
+| COST-05 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 43 total

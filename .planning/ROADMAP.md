@@ -18,7 +18,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors (2026-02-28)
 - [x] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators (2026-02-28)
 - [x] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers (2026-02-28)
-- [ ] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json`
+- [x] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json` (2026-02-28)
 
 ## Phase Details
 
@@ -158,8 +158,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Create CostTracker module, integrate into run_pipeline (running total + budget enforcement + cost_report.json + CLI flag + server.py wiring) (COST-01, COST-02, COST-04, COST-05)
-- [ ] 09-02-PLAN.md — Add live cost counter to dashboard, write TestCostTracker test suite (COST-03, COST-01, COST-02, COST-04, COST-05)
+- [x] 09-01-PLAN.md — Create CostTracker module, integrate into run_pipeline (running total + budget enforcement + cost_report.json + CLI flag + server.py wiring) (COST-01, COST-02, COST-04, COST-05)
+- [x] 09-02-PLAN.md — Add live cost counter to dashboard, write TestCostTracker test suite (COST-03, COST-01, COST-02, COST-04, COST-05)
 
 ## Progress
 
@@ -175,4 +175,4 @@ Plans:
 | 6. Dynamic Provider Count | 2/2 | Complete | 2026-02-28 |
 | 7. Rich Real-time UX | 3/3 | Complete | 2026-02-28 |
 | 8. Native JSON Mode | 1/1 | Complete | 2026-02-28 |
-| 9. Live Cost Tracking | 0/2 | Not started | - |
+| 9. Live Cost Tracking | 2/2 | Complete | 2026-02-28 |
