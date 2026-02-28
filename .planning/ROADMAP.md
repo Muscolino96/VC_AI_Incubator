@@ -10,7 +10,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - Integer phases (1-9): Planned overhaul work in dependency order
 - Decimal phases: Urgent insertions only (none planned)
 
-- [ ] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time
+- [x] **Phase 1: Parallelization** - Run all independent API calls concurrently to reduce wall-clock time (2026-02-28)
 - [ ] **Phase 2: Pre-flight Validation** - Validate all providers before any real pipeline work begins
 - [ ] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders
 - [ ] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts
@@ -35,9 +35,9 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Parallelize Stage 1 idea generation and selection (PARA-04, PARA-05)
-- [ ] 01-02-PLAN.md — Parallelize Stage 2 outer founder loop and inner advisor reviews (PARA-01, PARA-02)
-- [ ] 01-03-PLAN.md — Parallelize Stage 3 investor evaluations; add wall-clock speedup test (PARA-03, PARA-06)
+- [x] 01-01-PLAN.md — Parallelize Stage 1 idea generation and selection (PARA-04, PARA-05)
+- [x] 01-02-PLAN.md — Parallelize Stage 2 outer founder loop and inner advisor reviews (PARA-01, PARA-02)
+- [x] 01-03-PLAN.md — Parallelize Stage 3 investor evaluations; add wall-clock speedup test (PARA-03, PARA-06)
 
 ### Phase 2: Pre-flight Validation
 **Goal**: Users know immediately if any provider is misconfigured before the pipeline consumes tokens doing real work
@@ -138,7 +138,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Parallelization | 0/3 | Planned | - |
+| 1. Parallelization | 3/3 | Complete | 2026-02-28 |
 | 2. Pre-flight Validation | 0/TBD | Not started | - |
 | 3. Resume Fix | 0/TBD | Not started | - |
 | 4. Flexible Idea Count | 0/TBD | Not started | - |

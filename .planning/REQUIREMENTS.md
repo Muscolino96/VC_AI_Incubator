@@ -9,12 +9,12 @@ Requirements for the overhaul milestone. Each maps to exactly one phase. Source:
 
 ### Parallelization
 
-- [ ] **PARA-01**: Pipeline runs all 4 founders' Stage 2 build-iterate cycles concurrently
-- [ ] **PARA-02**: Within each Stage 2 round, all advisor reviews run concurrently
-- [ ] **PARA-03**: Stage 3 investor evaluations run concurrently
-- [ ] **PARA-04**: Stage 1 idea generation calls run concurrently
-- [ ] **PARA-05**: Stage 1 selection calls run concurrently
-- [ ] **PARA-06**: Wall-clock time for a full mock run is ≤ 40% of sequential baseline
+- [x] **PARA-01**: Pipeline runs all 4 founders' Stage 2 build-iterate cycles concurrently
+- [x] **PARA-02**: Within each Stage 2 round, all advisor reviews run concurrently
+- [x] **PARA-03**: Stage 3 investor evaluations run concurrently
+- [x] **PARA-04**: Stage 1 idea generation calls run concurrently
+- [x] **PARA-05**: Stage 1 selection calls run concurrently
+- [x] **PARA-06**: Wall-clock time for a full mock run is ≤ 40% of sequential baseline
 
 ### Preflight
 
