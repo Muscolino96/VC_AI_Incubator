@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
 from vc_agents.logging_config import get_logger, setup_logging
+from vc_agents.pipeline.cost_tracker import BudgetExceeded, CostTracker
 from vc_agents.pipeline.events import EventCallback, EventType, PipelineEvent, noop_callback
 from vc_agents.providers import (
     AnthropicMessages,
@@ -917,6 +918,21 @@ def run_stage3(
 
 
 # ---------------------------------------------------------------------------
+# Cost helpers
+# ---------------------------------------------------------------------------
+
+
+def _write_cost_report(
+    run_dir: Path, tracker: CostTracker, providers: list[BaseProvider]
+) -> None:
+    """Write cost_report.json alongside token_usage.json in the run directory."""
+    report = tracker.cost_report()
+    cost_report_path = run_dir / "cost_report.json"
+    cost_report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    logger.info("Cost report written to %s (total: $%.4f)", cost_report_path, report["total_cost_usd"])
+
+
+# ---------------------------------------------------------------------------
 # Pipeline orchestrator
 # ---------------------------------------------------------------------------
 
@@ -937,6 +953,7 @@ def run_pipeline(
     mock_providers: list[BaseProvider] | None = None,
     slot3_base_url: str = "https://api.deepseek.com/v1",
     slot4_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai",
+    budget: float | None = None,
 ) -> Path:
     """Run the complete 3-stage incubator pipeline."""
     if use_mock:
@@ -1011,6 +1028,11 @@ def run_pipeline(
         run_dir.mkdir(parents=True, exist_ok=True)
         checkpoint = None
     logger.info("Pipeline output: %s", run_dir)
+
+    # Initialise cost tracker — snapshots current usage so the first record_step()
+    # only counts tokens consumed after this point.
+    tracker = CostTracker(providers, budget=budget)
+
     emit(PipelineEvent(
         type=EventType.PIPELINE_START, message="Pipeline started",
         data={
@@ -1035,6 +1057,13 @@ def run_pipeline(
                 sector_focus=sector_focus, emit=emit, roles=roles,
             )
             _save_checkpoint(run_dir, {"stage1_complete": True})
+            tracker.record_step()
+            tracker.check_budget()
+            emit(PipelineEvent(
+                type=EventType.STEP_COMPLETE, stage="stage1", step="cost_update",
+                message=f"Running cost: ${tracker.running_cost:.4f}",
+                data={"running_cost": tracker.running_cost},
+            ))
 
         # Stage 2: Build and Iterate
         if checkpoint and checkpoint.get("stage2_complete"):
@@ -1085,6 +1114,13 @@ def run_pipeline(
                 "stage1_complete": True,
                 "stage2_complete": True,
             })
+            tracker.record_step()
+            tracker.check_budget()
+            emit(PipelineEvent(
+                type=EventType.STEP_COMPLETE, stage="stage2", step="cost_update",
+                message=f"Running cost: ${tracker.running_cost:.4f}",
+                data={"running_cost": tracker.running_cost},
+            ))
 
         # Stage 3: Seed Pitch
         report = run_stage3(
@@ -1097,6 +1133,13 @@ def run_pipeline(
             "stage2_complete": True,
             "stage3_complete": True,
         })
+        tracker.record_step()
+        tracker.check_budget()
+        emit(PipelineEvent(
+            type=EventType.STEP_COMPLETE, stage="stage3", step="cost_update",
+            message=f"Running cost: ${tracker.running_cost:.4f}",
+            data={"running_cost": tracker.running_cost},
+        ))
 
         # Print portfolio summary
         logger.info("\n=== PORTFOLIO SUMMARY ===")
@@ -1107,7 +1150,7 @@ def run_pipeline(
                 row["investors_in"], row["investors_total"], row["avg_conviction"],
             )
 
-        # Log and save token usage
+        # Log and save token usage (augmented with per-provider cost estimates)
         logger.info("\n=== TOKEN USAGE ===")
         token_summary: dict[str, Any] = {}
         for provider in providers:
@@ -1120,9 +1163,15 @@ def run_pipeline(
                 "input_tokens": provider.usage.input_tokens,
                 "output_tokens": provider.usage.output_tokens,
                 "total_tokens": provider.usage.total,
+                "estimated_cost_usd": round(
+                    tracker._per_provider_cost.get(provider.name, 0.0), 6
+                ),
             }
         token_usage_path = run_dir / "token_usage.json"
         token_usage_path.write_text(json.dumps(token_summary, indent=2), encoding="utf-8")
+
+        # Write cost breakdown report alongside token_usage.json
+        _write_cost_report(run_dir, tracker, providers)
 
         emit(PipelineEvent(
             type=EventType.PIPELINE_COMPLETE, message="Pipeline complete",
@@ -1130,6 +1179,21 @@ def run_pipeline(
         ))
         return run_dir
 
+    except BudgetExceeded as exc:
+        logger.warning(
+            "Budget exceeded: spent $%.4f of $%.4f limit — stopping after current step",
+            exc.running_cost, exc.budget,
+        )
+        existing_cp = _load_checkpoint(run_dir) or {}
+        _save_checkpoint(run_dir, existing_cp)
+        _write_cost_report(run_dir, tracker, providers)
+        emit(PipelineEvent(
+            type=EventType.PIPELINE_ERROR,
+            message=f"Budget exceeded: spent ${exc.running_cost:.4f} of ${exc.budget:.4f} limit",
+        ))
+        raise RuntimeError(
+            f"Budget exceeded: spent ${exc.running_cost:.4f} of ${exc.budget:.4f} limit"
+        ) from exc
     except (ProviderError, RuntimeError) as exc:
         emit(PipelineEvent(
             type=EventType.PIPELINE_ERROR, message=str(exc),
@@ -1202,6 +1266,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--skip-preflight", action="store_true",
         help="Skip pre-flight provider validation (use when keys are known good)",
     )
+    parser.add_argument(
+        "--budget", type=float, default=None,
+        help=(
+            "Stop pipeline gracefully if running cost exceeds this amount in USD "
+            "(e.g. --budget 0.50). Saves checkpoint and writes cost_report.json before stopping."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1244,6 +1315,7 @@ def main(argv: list[str] | None = None) -> int:
         roles_config=roles_override,
         deliberation_enabled=args.deliberation,
         skip_preflight=args.skip_preflight,
+        budget=args.budget,
     )
     logger.info("Pipeline complete. Outputs in %s", run_dir)
     return 0

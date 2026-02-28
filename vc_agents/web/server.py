@@ -36,6 +36,7 @@ class RunConfig(BaseModel):
     concurrency: int = 1
     retry_max: int = 3
     deliberation_enabled: bool = False
+    budget: float | None = None
     models: dict[str, str] = {}
     base_urls: dict[str, str] = {}
     api_keys: dict[str, str] = {}
@@ -140,6 +141,7 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             ideas_per_provider=config.get("ideas_per_provider", 5),
             sector_focus=sector,
             deliberation_enabled=config.get("deliberation_enabled", False),
+            budget=config.get("budget"),
             emit=emit,
             provider_config=config,
             slot3_base_url=slot3_base_url,
