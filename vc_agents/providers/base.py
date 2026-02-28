@@ -21,6 +21,10 @@ class ProviderError(RuntimeError):
     """Raised when a provider call fails."""
 
 
+class FatalProviderError(ProviderError):
+    """Raised for non-retryable errors (e.g. 401/403/404). Never retried."""
+
+
 @dataclass
 class TokenUsage:
     """Tracks token consumption for a provider across all calls."""
@@ -217,6 +221,12 @@ class BaseProvider(abc.ABC):
                 return response.json()
 
             except (httpx.HTTPError, json.JSONDecodeError, ProviderError) as exc:
+                # 4xx client errors are configuration problems — never transient, never retry.
+                if isinstance(exc, httpx.HTTPStatusError) and 400 <= exc.response.status_code < 500:
+                    raise FatalProviderError(
+                        f"{self.config.name}: HTTP {exc.response.status_code} "
+                        f"({exc.response.reason_phrase}) — {exc.response.text[:300]}"
+                    ) from exc
                 last_error = exc
                 if attempt == retry.max_attempts:
                     break

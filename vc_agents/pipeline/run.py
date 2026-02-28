@@ -31,7 +31,7 @@ from vc_agents.providers import (
     OpenAICompatibleChat,
     OpenAIResponses,
 )
-from vc_agents.providers.base import BaseProvider, ProviderError, extract_json
+from vc_agents.providers.base import BaseProvider, FatalProviderError, ProviderError, extract_json
 from vc_agents.pipeline.report import build_portfolio_report, write_report_csv
 from vc_agents.schemas import (
     ADVISOR_REVIEW_SCHEMA,
@@ -329,6 +329,9 @@ def retry_json_call(
                 validate_schema(data, schema, context)
             return data
         except Exception as exc:
+            # FatalProviderError means the error won't be fixed by retrying (e.g. 401).
+            if isinstance(exc, FatalProviderError):
+                raise RuntimeError(f"{context} failed: {exc}") from exc
             last_error = exc
             logger.warning(
                 "%s attempt %d/%d failed: %s", context, attempt, effective_retries, exc
