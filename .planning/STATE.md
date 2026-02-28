@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-28T21:30:00.000Z"
+last_updated: "2026-02-28T22:30:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 10
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** The pipeline must complete a full run reliably and produce a ranked portfolio report that reflects genuine multi-model deliberation.
-**Current focus:** Phase 6 — Dynamic Provider Count
+**Current focus:** Phase 7 — Rich Real-time UX
 
 ## Current Position
 
-Phase: 6 of 9 (Dynamic Provider Count)
+Phase: 7 of 9 (Rich Real-time UX)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-02-28 — Phase 5 New Dashboard complete (2/2 plans, 69/69 tests)
+Last activity: 2026-02-28 — Phase 6 Dynamic Provider Count complete (2/2 plans, 75/75 tests)
 
-Progress: [█████░░░░░] 56%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
@@ -45,9 +45,10 @@ Progress: [█████░░░░░] 56%
 | 3 - Resume Fix | 1 | 20 min | 20 min |
 | 4 - Flexible Idea Count | 1 | 15 min | 15 min |
 | 5 - New Dashboard | 2 | 30 min | 15 min |
+| 6 - Dynamic Provider Count | 2 | 25 min | 13 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (15m), 03-01 (20m), 04-01 (15m), 05-01 (15m), 05-02 (15m)
+- Last 5 plans: 03-01 (20m), 04-01 (15m), 05-01 (15m), 05-02 (15m), 06-01+06-02 (25m total)
 - Trend: Consistent, fast execution
 
 *Updated after each plan completion*
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - Phase 4: ideas_per_provider==1 bypass in run_stage1() auto-selects my_ideas[0], skips LLM call
 - Phase 4: MockProvider always returns 5 ideas regardless of ideas_count; test assertions adjusted accordingly
 - Phase 5: deliberation block in renderPlans() implemented as IIFE inside template literal (self-contained within loop body)
+- Phase 6: mock_providers param placed after skip_preflight, before slot3_base_url to avoid positional arg breakage
+- Phase 6: advisor self-exclusion already correct in production code (line 641); no structural changes needed
+- Phase 6: role rotation already uses % len(ADVISOR_ROLES) — correct for any N advisors
 
 ### Pending Todos
 
@@ -87,5 +91,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 5 complete — 2/2 plans executed, 69/69 tests pass, ROADMAP updated
+Stopped at: Phase 6 complete — 2/2 plans executed, 75/75 tests pass, ROADMAP updated
 Resume file: None

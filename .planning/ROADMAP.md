@@ -15,7 +15,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 - [x] **Phase 3: Resume Fix** - Per-founder Stage 2 checkpointing so crashes mid-stage don't restart all founders (2026-02-28)
 - [x] **Phase 4: Flexible Idea Count** - Support `--ideas-per-provider 1` and `2` with adapted prompts (2026-02-28)
 - [x] **Phase 5: New Dashboard** - Replace dashboard.html with new version; wire base_urls, feedback, token, deliberation tabs (2026-02-28)
-- [ ] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors
+- [x] **Phase 6: Dynamic Provider Count** - Pipeline works correctly with any N founders, advisors, and investors (2026-02-28)
 - [ ] **Phase 7: Rich Real-time UX** - Live idea cards, score overlays, advisor widgets, and step state indicators
 - [ ] **Phase 8: Native JSON Mode** - Per-provider `supports_native_json` flag reduces retry overhead for OpenAI providers
 - [ ] **Phase 9: Live Cost Tracking** - Per-call cost calculation, running total, `--budget` ceiling, `cost_report.json`
@@ -110,8 +110,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Add mock_providers param to run_pipeline; fix hardcoded count assertions in existing tests (DYN-01, DYN-02, DYN-03, DYN-04)
-- [ ] 06-02-PLAN.md — Add TestDynamicProviderCount: 2-founder, 6-provider, review count, role rotation tests (DYN-05)
+- [x] 06-01-PLAN.md — Add mock_providers param to run_pipeline; fix hardcoded count assertions in existing tests (DYN-01, DYN-02, DYN-03, DYN-04)
+- [x] 06-02-PLAN.md — Add TestDynamicProviderCount: 2-founder, 6-provider, review count, role rotation tests (DYN-05)
 
 ### Phase 7: Rich Real-time UX
 **Goal**: The dashboard surfaces live progress at the individual idea, plan, and investor-decision level as each event arrives — not only after a stage finishes
@@ -160,7 +160,7 @@ Plans:
 | 3. Resume Fix | 1/1 | Complete | 2026-02-28 |
 | 4. Flexible Idea Count | 1/1 | Complete | 2026-02-28 |
 | 5. New Dashboard | 2/2 | Complete | 2026-02-28 |
-| 6. Dynamic Provider Count | 0/2 | Not started | - |
+| 6. Dynamic Provider Count | 2/2 | Complete | 2026-02-28 |
 | 7. Rich Real-time UX | 0/TBD | Not started | - |
 | 8. Native JSON Mode | 0/TBD | Not started | - |
 | 9. Live Cost Tracking | 0/TBD | Not started | - |
