@@ -8,9 +8,12 @@ from pathlib import Path
 import pytest
 
 from vc_agents.pipeline.run import run_pipeline, _load_founder_plan_from_disk
-from vc_agents.pipeline.run import run_preflight, PreflightError
-from vc_agents.providers.base import BaseProvider, ProviderError
+from vc_agents.pipeline.run import run_preflight, PreflightError, retry_json_call
+from vc_agents.providers.anthropic_messages import AnthropicMessages
+from vc_agents.providers.base import BaseProvider, ProviderConfig, ProviderError
 from vc_agents.providers.mock import MockProvider
+from vc_agents.providers.openai_compatible_chat import OpenAICompatibleChat
+from vc_agents.providers.openai_responses import OpenAIResponses
 
 
 class TestPipelineMock:
@@ -1006,3 +1009,59 @@ class TestDynamicProviderCount:
         assert len(plans) == 1, f"Expected 1 final plan for 1 founder, got {len(plans)}"
         decisions = _read_jsonl(run_dir / "stage3_decisions.jsonl")
         assert len(decisions) == 3, f"Expected 3 investor decisions (1 founder * 3 investors), got {len(decisions)}"
+
+
+class TestNativeJsonMode:
+    """JSON-01 through JSON-04: supports_native_json flag behavior."""
+
+    def test_json01_provider_config_flag_defaults_false(self):
+        """JSON-01: ProviderConfig.supports_native_json defaults to False."""
+        config = ProviderConfig(name="x", api_key_env="X", base_url="http://x")
+        assert config.supports_native_json is False
+
+    def test_json01_provider_config_flag_can_be_set_true(self):
+        """JSON-01: ProviderConfig.supports_native_json can be set to True."""
+        config = ProviderConfig(name="x", api_key_env="X", base_url="http://x",
+                                supports_native_json=True)
+        assert config.supports_native_json is True
+
+    def test_json02_native_flag_reduces_retries_to_one(self):
+        """JSON-02: When supports_native_json=True, retry_json_call calls generate exactly once
+        regardless of max_retries value."""
+        call_count = 0
+
+        class NativeMock(MockProvider):
+            def __init__(self) -> None:
+                super().__init__("native-mock")
+                self.config.supports_native_json = True
+
+            def generate(self, prompt: str, system: str = "") -> str:
+                nonlocal call_count
+                call_count += 1
+                return '{"ideas": []}'
+
+        provider = NativeMock()
+        result = retry_json_call(
+            provider=provider,
+            prompt="dummy",
+            schema=None,
+            context="test",
+            max_retries=3,
+        )
+        assert call_count == 1, (
+            f"Expected exactly 1 call for native JSON provider, got {call_count}"
+        )
+
+    def test_json03_openai_providers_have_flag_true(self):
+        """JSON-03: OpenAIResponses and OpenAICompatibleChat have supports_native_json=True."""
+        r = OpenAIResponses(api_key="test-key")
+        c = OpenAICompatibleChat(api_key="test-key")
+        assert r.config.supports_native_json is True, "OpenAIResponses must have native JSON flag"
+        assert c.config.supports_native_json is True, "OpenAICompatibleChat must have native JSON flag"
+
+    def test_json04_non_openai_providers_have_flag_false(self):
+        """JSON-04: AnthropicMessages and MockProvider do NOT have the native JSON flag."""
+        a = AnthropicMessages(api_key="test-key")
+        m = MockProvider("test-mock")
+        assert a.config.supports_native_json is False, "AnthropicMessages must not have native JSON flag"
+        assert m.config.supports_native_json is False, "MockProvider must not have native JSON flag"
