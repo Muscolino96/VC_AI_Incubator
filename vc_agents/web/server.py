@@ -22,8 +22,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from vc_agents.logging_config import setup_logging
+from vc_agents.pipeline.cost_estimator import estimate_cost, load_catalog
 from vc_agents.pipeline.events import EventCallback, PipelineEvent
-from vc_agents.pipeline.run import run_pipeline
+from vc_agents.pipeline.run import _load_jsonl, run_pipeline
 
 load_dotenv()
 
@@ -107,6 +108,7 @@ def _run_in_thread(run_id: str, config: dict[str, Any], loop: asyncio.AbstractEv
             max_iterations=config.get("max_iterations", 3),
             ideas_per_provider=config.get("ideas_per_provider", 5),
             sector_focus=sector,
+            deliberation_enabled=config.get("deliberation_enabled", False),
             emit=emit,
             provider_config=config,
         )
@@ -181,6 +183,21 @@ async def get_run(run_id: str) -> JSONResponse:
             return JSONResponse({"error": "Run not found"}, status_code=404)
         data = dict(_runs[run_id])
     return JSONResponse(data)
+
+
+@app.get("/api/catalog")
+async def get_catalog() -> JSONResponse:
+    """Return the full models catalog from models_catalog.yaml."""
+    catalog = load_catalog()
+    return JSONResponse(catalog)
+
+
+@app.post("/api/estimate")
+async def get_estimate(body: dict[str, Any]) -> JSONResponse:
+    """Estimate pipeline cost for the given model IDs."""
+    model_ids = body.get("model_ids", [])
+    result = estimate_cost(model_ids)
+    return JSONResponse(result)
 
 
 @app.get("/api/runs/{run_id}/results")
