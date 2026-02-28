@@ -32,7 +32,12 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
   3. Stage 2 all four founders' build-iterate cycles run at the same time; within each round all advisor reviews fire together
   4. Stage 3 all investor evaluation calls fire concurrently
   5. `pytest tests/ -v` passes after the change
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Parallelize Stage 1 idea generation and selection (PARA-04, PARA-05)
+- [ ] 01-02-PLAN.md — Parallelize Stage 2 outer founder loop and inner advisor reviews (PARA-01, PARA-02)
+- [ ] 01-03-PLAN.md — Parallelize Stage 3 investor evaluations; add wall-clock speedup test (PARA-03, PARA-06)
 
 ### Phase 2: Pre-flight Validation
 **Goal**: Users know immediately if any provider is misconfigured before the pipeline consumes tokens doing real work
@@ -133,7 +138,7 @@ Nine targeted improvements to the existing pipeline: parallelization makes it fa
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Parallelization | 0/TBD | Not started | - |
+| 1. Parallelization | 0/3 | Planned | - |
 | 2. Pre-flight Validation | 0/TBD | Not started | - |
 | 3. Resume Fix | 0/TBD | Not started | - |
 | 4. Flexible Idea Count | 0/TBD | Not started | - |
