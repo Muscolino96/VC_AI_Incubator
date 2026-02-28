@@ -26,7 +26,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A Stage 3 run that resumes from checkpoint iterates through `final_plans` without raising a KeyError, regardless of founder name vs provider name mismatch
   3. `POST /api/runs` in `/docs` shows the `RunConfig` schema with `base_urls` and `api_keys` fields; submitting a malformed body returns a 422 with field-level details
   4. Slots 3 and 4 connect to the base URL supplied by the dashboard (not a hardcoded env var); changing the URL in the request body changes where the OpenAI-compatible client points
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Fix _load_jsonl import (BUG-01) and rekey checkpoint dicts by idea_id (BUG-02)
+- [ ] 01-02-PLAN.md — Add RunConfig Pydantic model (BUG-03) and wire slot base URLs through server + pipeline (BUG-04)
 
 ### Phase 2: Dashboard Overhaul
 **Goal**: The dashboard displays a 4-slot team builder with provider tabs and editable base URL fields, sends the correct wire payload on launch, and is visually refreshed with the new design tokens
@@ -47,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Backend Fixes | 0/TBD | Not started | - |
+| 1. Backend Fixes | 0/2 | Not started | - |
 | 2. Dashboard Overhaul | 0/TBD | Not started | - |
