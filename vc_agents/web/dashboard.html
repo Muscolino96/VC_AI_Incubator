@@ -335,6 +335,9 @@ select option { background: #1a1b20; }
 .progress-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 14px; }
 .progress-title { font-family: var(--font-serif); font-size: 17px; font-weight: 400; margin-bottom: 2px; }
 .progress-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+.progress-cost { text-align: right; }
+.cost-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
+.cost-value { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: var(--gold); }
 
 .stage-track { display: flex; align-items: center; padding: 4px 24px 18px; }
 .stage-node { flex: 1; display: flex; align-items: center; }
@@ -696,6 +699,10 @@ details[open] .plan-chevron { transform: rotate(90deg); background: var(--gold-d
       <div>
         <div class="progress-title">Running…</div>
         <div class="progress-sub" id="progressSub">Initialising</div>
+      </div>
+      <div class="progress-cost" id="progressCost" style="display:none">
+        <div class="cost-label">Spent</div>
+        <div class="cost-value" id="costCounter">$0.0000</div>
       </div>
     </div>
     <div class="stage-track">
@@ -1165,6 +1172,13 @@ function handleEvent(ev) {
   if (ev.type === 'step_complete' && ev.stage === 'stage2' && (ev.step||'').startsWith('review_round')) handleStage2ReviewRound(ev);
   // Live Stage 3 handler
   if (ev.type === 'step_complete' && ev.stage === 'stage3' && ev.step === 'investor_decision') handleStage3Decision(ev);
+  // Live cost counter
+  if (ev.type === 'step_complete' && ev.step === 'cost_update' && ev.data && ev.data.running_cost != null) {
+    const costEl = document.getElementById('progressCost');
+    const counterEl = document.getElementById('costCounter');
+    if (costEl) costEl.style.display = '';
+    if (counterEl) counterEl.textContent = '$' + ev.data.running_cost.toFixed(4);
+  }
   // Step state indicators
   if (ev.type === 'step_start') markStepStart(ev);
   if (ev.type === 'step_complete') markStepDone(ev);
@@ -1189,6 +1203,10 @@ async function startRun() {
   ['pill1','pill2','pill3'].forEach(id => document.getElementById(id).classList.remove('active','done'));
   document.getElementById('pbarFill').style.width = '0%';
   document.getElementById('eventLog').innerHTML = '';
+  const costEl = document.getElementById('progressCost');
+  const counterEl = document.getElementById('costCounter');
+  if (costEl) costEl.style.display = 'none';
+  if (counterEl) counterEl.textContent = '$0.0000';
   document.getElementById('progressBlock').classList.add('visible');
   document.getElementById('progressSub').textContent = 'Initialising pipeline…';
 
