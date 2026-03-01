@@ -194,7 +194,10 @@ async def create_run(config: RunConfig = RunConfig()) -> JSONResponse:
 
 @app.get("/api/runs")
 async def list_runs() -> JSONResponse:
-    """List all runs (active and completed)."""
+    """List all runs (active, completed, and from disk)."""
+    summaries = []
+
+    # Add in-memory runs
     with _runs_lock:
         summaries = [
             {
@@ -205,9 +208,45 @@ async def list_runs() -> JSONResponse:
                 "completed_at": run["completed_at"],
                 "event_count": len(run["events"]),
                 "error": run["error"],
+                "source": "memory",
             }
             for run in _runs.values()
         ]
+
+    # Scan out/ folder for completed runs
+    try:
+        out_path = Path("out")
+        if out_path.exists() and out_path.is_dir():
+            for run_dir in sorted(out_path.iterdir(), reverse=True):
+                if run_dir.is_dir() and run_dir.name.startswith("run_"):
+                    run_id = run_dir.name
+                    # Don't add if already in memory
+                    if not any(s["run_id"] == run_id for s in summaries):
+                        # Try to find cost_report.json for timestamp
+                        cost_report_path = run_dir / "cost_report.json"
+                        timestamp = None
+                        if cost_report_path.exists():
+                            try:
+                                with cost_report_path.open() as f:
+                                    cost_data = json.load(f)
+                                    timestamp = cost_data.get("timestamp")
+                            except Exception:
+                                pass
+
+                        summaries.append({
+                            "run_id": run_id,
+                            "status": "complete",
+                            "config": {},
+                            "started_at": timestamp,
+                            "completed_at": timestamp,
+                            "event_count": 0,
+                            "error": None,
+                            "source": "disk",
+                        })
+    except Exception as e:
+        # If we can't read the out folder, just return in-memory runs
+        print(f"Warning: Could not scan out/ folder: {e}")
+
     return JSONResponse(summaries)
 
 
@@ -239,19 +278,28 @@ async def get_estimate(body: dict[str, Any]) -> JSONResponse:
 @app.get("/api/runs/{run_id}/results")
 async def get_results(run_id: str) -> JSONResponse:
     """Get pipeline results (reads JSONL files from run directory)."""
-    if run_id not in _runs:
+    # First check if run is in memory
+    run_dir = None
+    if run_id in _runs:
+        run = _runs[run_id]
+        if run["status"] != "complete" or not run["run_dir"]:
+            return JSONResponse({"error": "Run not complete yet"}, status_code=400)
+        run_dir = Path(run["run_dir"])
+    else:
+        # Try to load from disk if run_id matches out/run_<id> pattern
+        out_path = Path("out") / run_id
+        if out_path.exists() and out_path.is_dir():
+            run_dir = out_path
+        else:
+            return JSONResponse({"error": "Run not found"}, status_code=404)
+
+    if not run_dir:
         return JSONResponse({"error": "Run not found"}, status_code=404)
-
-    run = _runs[run_id]
-    if run["status"] != "complete" or not run["run_dir"]:
-        return JSONResponse({"error": "Run not complete yet"}, status_code=400)
-
-    run_dir = Path(run["run_dir"])
     results: dict[str, Any] = {}
 
     for jsonl_file in sorted(run_dir.glob("*.jsonl")):
         records = []
-        with jsonl_file.open() as f:
+        with jsonl_file.open(encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:

@@ -1329,8 +1329,12 @@ async function loadRuns() {
 async function loadResults(runId) {
   try {
     const resp = await fetch(`/api/runs/${runId}/results`);
-    if (!resp.ok) return;
+    if (!resp.ok) {
+      console.error('Failed to load results:', resp.status, resp.statusText);
+      return;
+    }
     const r = await resp.json();
+    console.log('Results loaded:', Object.keys(r));
     renderIdeas(r.stage1_ideas || []);
     renderPlans(r.stage2_final_plans || [], r);
     renderPitches(r.stage3_pitches || [], r.stage3_decisions || []);
@@ -1338,7 +1342,9 @@ async function loadResults(runId) {
     renderFeedback(r.stage1_feedback || []);
     renderTokenUsage(r.token_usage || {});
     switchTab('portfolio');
-  } catch(e) {}
+  } catch(e) {
+    console.error('Error loading results:', e);
+  }
 }
 
 /* ══════════════════ RENDER ══════════════════ */
